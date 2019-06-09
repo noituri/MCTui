@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // Versions
 #[derive(Serialize, Deserialize)]
@@ -20,15 +21,23 @@ pub struct Version {
     pub v_type: String,
     pub url: String,
     pub time : String,
-    pub releaseTime: String
+    #[serde(rename = "releaseTime")]
+    pub release_time: String
 }
 
 // Libraries
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Libraries {
-    pub assets: String,
+    #[serde(rename = "assetIndex")]
+    pub asset_index: AssetIndex,
     pub downloads: Downloads,
     pub libraries: Vec<Library>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AssetIndex {
+    pub id: String,
+    pub url: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -72,4 +81,16 @@ pub struct Classifier {
     #[serde(rename = "natives-windows")]
     pub natives_windows: Option<File>,
     pub sources: Option<File>
+}
+
+// Assets
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Assets {
+    pub objects: HashMap<String, Object>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Object {
+    pub hash: String,
+    pub size: i32
 }

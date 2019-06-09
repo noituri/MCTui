@@ -60,6 +60,7 @@ pub fn gen_libs_path(path: &str) -> Option<String> {
 }
 
 pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str) {
+    println!("Launching Minecraft Instance...");
     let libs = gen_libs_path(format!("{}/libs", profile).as_str()).unwrap();
     let assets = format!("{}/assets", profile);
     let game_dir = format!("{}/game", profile);

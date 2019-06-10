@@ -6,37 +6,29 @@ use std::fs::create_dir_all;
 use std::io;
 use std::path::Path;
 use std::process::Command;
+use crate::structs::*;
+use crate::constants::*;
+use crate::utils::files;
 
-pub fn download_file(url: String, path: &str) {
-    create_dir_all(path);
+static PROFILE: &str = "Default14";
+static USERNAME: &str = "Vedmak";
 
-    let url_parts: Vec<&str> = url.split('/').collect();
-    let output = Path::new(path).join(url_parts.last().unwrap());
+pub fn prepare_game() {
+    let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
 
-    match reqwest::get(url.as_str()) {
-        Ok(mut resp) => {
-            match resp.status() {
-                StatusCode::OK => (),
-                _ => {
-                    println!("Could not download this file: {}", url);
-                    return;
-                },
-            }
-            let mut file = match File::create(&output) {
-                Ok(f) => f,
-                Err(err) => {
-                    println!("Error occurred while creating file: {} | Error: {}", output.display(), err);
-                    return;
-                }
-            };
-            match io::copy(&mut resp, &mut file) {
-                Ok(_) => println!("File {} has been downloaded", output.display()),
-                Err(err) => println!("Could not download this file: {} | Error: {}", url, err),
-            }
-        },
+    for v in versions_resp.versions {
+        if v.id == "1.14.2" {
+            files::download_basic_game(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), PROFILE);
 
-        Err(err) => println!("Could not download this file: {} | Error: {}", url, err),
-    };
+            gen_run_cmd(
+                format!("{}/profiles/{}", DOT_MCTUI, PROFILE).as_str(),
+                "/usr/bin/java",
+                "/usr/share/lwjgl2/native/linux",
+                USERNAME,
+                &v.id
+            );
+        }
+    }
 }
 
 pub fn gen_libs_path(path: &str) -> Option<String> {
@@ -66,7 +58,7 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
     let game_dir = format!("{}/game", profile);
 
     create_dir_all(game_dir.to_owned());
-
+    // TODO: Split this into separate options
     let cmd = format!("{} -Xmx1G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, version);
 
     let logs = Command::new("bash")

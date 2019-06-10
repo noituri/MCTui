@@ -1,31 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
-// Versions
-#[derive(Serialize, Deserialize)]
-pub struct Versions {
-    pub latest: Latest,
-    pub versions: Vec<Version>
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Latest {
-    pub release: String,
-    pub snapshot: String
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Version {
-    pub id: String,
-    #[serde(rename = "type")]
-    pub v_type: String,
-    pub url: String,
-    pub time : String,
-    #[serde(rename = "releaseTime")]
-    pub release_time: String
-}
-
-// Libraries
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Libraries {
     #[serde(rename = "assetIndex")]
@@ -37,7 +11,8 @@ pub struct Libraries {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AssetIndex {
     pub id: String,
-    pub url: String
+    pub url: String,
+    pub sha1: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -58,7 +33,8 @@ pub struct Downloads {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct File {
     pub path: Option<String>,
-    pub url: String
+    pub url: String,
+    pub sha1: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -81,16 +57,4 @@ pub struct Classifier {
     #[serde(rename = "natives-windows")]
     pub natives_windows: Option<File>,
     pub sources: Option<File>
-}
-
-// Assets
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Assets {
-    pub objects: HashMap<String, Object>
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Object {
-    pub hash: String,
-    pub size: i32
 }

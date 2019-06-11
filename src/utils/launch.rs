@@ -11,10 +11,10 @@ use crate::constants::*;
 use crate::utils::files;
 
 static PROFILE: &str = "Default14";
-static USERNAME: &str = "Vedmak";
 
 pub fn prepare_game() {
     let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
+    let settings = crate::SETTINGS.lock().unwrap();
 
     for v in versions_resp.versions {
         if v.id == "1.14.2" {
@@ -24,7 +24,7 @@ pub fn prepare_game() {
                 format!("{}/profiles/{}", DOT_MCTUI, PROFILE).as_str(),
                 "/usr/bin/java",
                 "/usr/share/lwjgl2/native/linux",
-                USERNAME,
+                &settings.auth.username,
                 &v.id
             );
         }

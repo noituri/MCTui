@@ -1,0 +1,12 @@
+{
+    "auth": {
+        "username": "",
+        "access_token": "",
+        "client_token": "",
+        "online": false
+    },
+    "profiles": {
+        "selected": "",
+        "profiles": []
+    }
+}

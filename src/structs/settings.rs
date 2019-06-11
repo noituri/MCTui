@@ -1,4 +1,9 @@
+use crate::constants::DOT_MCTUI;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
+use std::io::{Write, Read};
+use std::fs::File;
+use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
@@ -9,8 +14,9 @@ pub struct Settings {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Auth {
     pub username: String,
-    pub accessToken: String,
-    pub clientToken: String
+    pub access_token: String,
+    pub client_token: String,
+    pub online: bool
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,4 +30,23 @@ pub struct Profile {
     pub id: String,
     pub name: String,
     pub version: String
+}
+
+impl Settings {
+    pub fn new() -> Result<Self, Box<Error>> {
+        let settings_path = format!("{}/mctui.json", DOT_MCTUI);
+
+        if !Path::new(&settings_path).exists() {
+            let file_bytes = include_bytes!("../../assets/defaultconfig.json");
+            let mut file = std::fs::File::create(&settings_path)?;
+            file.write_all(file_bytes);
+            file.flush().unwrap();
+        }
+
+        let mut file = File::open(&settings_path)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+
+        Ok(serde_json::from_str(&contents).unwrap())
+    }
 }

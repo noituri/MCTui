@@ -9,11 +9,10 @@ use sha1::Digest;
 use crate::constants::*;
 use crate::structs::*;
 use std::error::Error;
-use std::io::ErrorKind;
 use std::io::Read;
 
 pub fn download_file(url: String, path: &str) {
-    create_dir_all(path);
+    create_dir_all(path).unwrap();
 
     let url_parts: Vec<&str> = url.split('/').collect();
     let output = Path::new(path).join(url_parts.last().unwrap());
@@ -66,6 +65,7 @@ pub fn verify_file_exists(file_path: &str, hash: &str) -> Result<(), Box<Error>>
 }
 
 pub fn download_basic_game(libs_resp: libraries::Libraries, profile: &str) {
+    // TODO rewrite this
     let assets_resp: assets::Assets = reqwest::get(libs_resp.asset_index.url.as_str()).unwrap().json().unwrap();
     let a_indx_path = format!("{}/profiles/{}/assets/indexes", DOT_MCTUI, profile);
 
@@ -74,7 +74,6 @@ pub fn download_basic_game(libs_resp: libraries::Libraries, profile: &str) {
     }
 
     for (_, asset) in &assets_resp.objects {
-//             break;
         let asset_path = format!("{}/profiles/{}/assets/objects/{}", DOT_MCTUI, profile, &asset.hash[0..2]);
 
         if verify_file_exists(format!("{}/{}", asset_path, &asset.hash).as_str(), &asset.hash).is_err() {
@@ -89,7 +88,6 @@ pub fn download_basic_game(libs_resp: libraries::Libraries, profile: &str) {
     }
 
     for lib in libs_resp.libraries.iter() {
-//             break;
         match &lib.downloads.artifact {
             Some(artifact) => {
                 let url_parts: Vec<&str> = artifact.url.split('/').collect();
@@ -104,7 +102,36 @@ pub fn download_basic_game(libs_resp: libraries::Libraries, profile: &str) {
 
         match &lib.downloads.classifiers {
             Some(classifiers) => {
+                #[cfg(target_os = "linux")]
                 match &classifiers.natives_linux {
+                    Some(native) => {
+                        let url_parts: Vec<&str> = native.url.split('/').collect();
+
+                        let class_path = format!("{}/profiles/{}/libs", DOT_MCTUI, profile);
+                        if verify_file_exists(format!("{}/{}", class_path, url_parts.last().unwrap()).as_str(), native.sha1.as_str()).is_err() {
+                            download_file(native.url.to_owned(), class_path.as_str())
+
+                        }
+                    },
+                    None => {}
+                }
+
+                #[cfg(target_os = "macos")]
+                match &classifiers.natives_osx {
+                    Some(native) => {
+                        let url_parts: Vec<&str> = native.url.split('/').collect();
+
+                        let class_path = format!("{}/profiles/{}/libs", DOT_MCTUI, profile);
+                        if verify_file_exists(format!("{}/{}", class_path, url_parts.last().unwrap()).as_str(), native.sha1.as_str()).is_err() {
+                            download_file(native.url.to_owned(), class_path.as_str())
+
+                        }
+                    },
+                    None => {}
+                }
+
+                #[cfg(target_os = "windows")]
+                match &classifiers.natives_windows {
                     Some(native) => {
                         let url_parts: Vec<&str> = native.url.split('/').collect();
 

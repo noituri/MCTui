@@ -1,6 +1,8 @@
 use crate::SETTINGS;
 use crate::constants::DOT_MCTUI;
-use std::path::Path;
+use crate::structs::settings::Profile;
+use uuid::Uuid;
+use std::fs::File;
 
 pub fn start_checker() {
     let mut settings = SETTINGS.lock().unwrap();
@@ -13,4 +15,37 @@ pub fn start_checker() {
         // TODO Yggdrasil
         panic!("implement me");
     }
+}
+
+pub fn create_profile(name: String, version: String) {
+    let mut settings = SETTINGS.lock().unwrap();
+
+    let mut id = Uuid::new_v4().to_string();
+
+    loop {
+        let mut exists = false;
+        for p in &settings.profiles.profiles {
+            if p.id == id {
+                id = Uuid::new_v4().to_string();
+                exists = true
+            }
+        }
+
+        if !exists {
+            break
+        }
+    }
+
+    settings.profiles.profiles.push(Profile{
+        id: id.to_owned(),
+        name,
+        version
+    });
+
+
+    if settings.profiles.selected == "" {
+        settings.profiles.selected = id;
+    }
+
+    serde_json::to_writer_pretty(&File::create(format!("{}/mctui.json", DOT_MCTUI)).unwrap(),&*settings).unwrap();
 }

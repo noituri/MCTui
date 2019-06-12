@@ -7,8 +7,6 @@ use utils::*;
 use structs::settings;
 use constants::DOT_MCTUI;
 use lazy_static::lazy_static;
-use std::fs::File;
-use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 
 lazy_static! {
@@ -16,8 +14,12 @@ lazy_static! {
 }
 
 fn main() {
-    std::env::set_current_dir(Path::new(DOT_MCTUI));
+    std::env::set_current_dir(Path::new(DOT_MCTUI)).unwrap();
     universal::start_checker();
-//    serde_json::to_writer_pretty(&File::create("test.json").unwrap(), &*SETTINGS);
-    launch::prepare_game();
+//    universal::create_profile("test".to_string(), "1.12.2".to_string());
+    let settings = SETTINGS.lock().unwrap();
+    let selected = settings.profiles.selected.to_owned();
+    std::mem::drop(settings);
+
+    launch::prepare_game(&selected);
 }

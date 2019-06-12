@@ -3,9 +3,14 @@ use crate::constants::DOT_MCTUI;
 use crate::structs::settings::Profile;
 use uuid::Uuid;
 use std::fs::File;
+use std::process::Command;
 
 pub fn start_checker() {
     let mut settings = SETTINGS.lock().unwrap();
+
+    let output = Command::new("ping").arg("-c").arg("1").arg("8.8.8.8").output().unwrap();
+
+    *crate::CONNECTION.lock().unwrap() = output.status.success();
 
     if settings.auth.username == "" && !settings.auth.online {
         settings.auth.username = "Steve".to_string();

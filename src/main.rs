@@ -11,6 +11,7 @@ use std::sync::Mutex;
 
 lazy_static! {
     static ref SETTINGS: Mutex<settings::Settings> = Mutex::new(settings::Settings::new().unwrap());
+    static ref CONNECTION: Mutex<bool> = Mutex::new(false);
 }
 
 fn main() {

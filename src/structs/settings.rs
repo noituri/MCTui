@@ -2,7 +2,7 @@ use crate::constants::DOT_MCTUI;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::io::{Write, Read};
-use std::fs::File;
+use std::fs::{File, create_dir_all};
 use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,11 +29,12 @@ pub struct Profiles {
 pub struct Profile {
     pub id: String,
     pub name: String,
-    pub version: String
+    pub version: String,
+    pub asset: String
 }
 
 impl Settings {
-    pub fn new() -> Result<Self, Box<Error>> {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
         let settings_path = format!("{}/mctui.json", DOT_MCTUI);
 
         if !Path::new(&settings_path).exists() {

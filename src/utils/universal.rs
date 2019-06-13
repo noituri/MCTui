@@ -22,7 +22,7 @@ pub fn start_checker() {
     }
 }
 
-pub fn create_profile(name: String, version: String) {
+pub fn create_profile(name: String, version: String, asset: String) {
     let mut settings = SETTINGS.lock().unwrap();
 
     let mut id = Uuid::new_v4().to_string();
@@ -44,7 +44,8 @@ pub fn create_profile(name: String, version: String) {
     settings.profiles.profiles.push(Profile{
         id: id.to_owned(),
         name,
-        version
+        version,
+        asset
     });
 
 

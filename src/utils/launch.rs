@@ -6,6 +6,7 @@ use std::process::Command;
 use crate::structs::*;
 use crate::constants::*;
 use crate::utils::files;
+//use futures::executor::block_on;
 
 pub fn prepare_game(profile_id: &str) {
     let settings = crate::SETTINGS.lock().unwrap();
@@ -22,7 +23,11 @@ pub fn prepare_game(profile_id: &str) {
 
         for v in versions_resp.versions {
             if v.id == profile.version {
-                files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name);
+                let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name);
+
+                for (k, v) in &to_download {
+                    files::download_file(k.to_string(), v)
+                }
             }
         }
     }
@@ -32,7 +37,8 @@ pub fn prepare_game(profile_id: &str) {
         "/usr/bin/java",
         "/usr/share/lwjgl2/native/linux",
         &settings.auth.username,
-        &profile.version
+        &profile.version,
+        &profile.asset
     );
 }
 
@@ -56,19 +62,19 @@ pub fn gen_libs_path(path: &str) -> Option<String> {
     Some(libs)
 }
 
-pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str) {
+pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str) {
     println!("Launching Minecraft Instance...");
-    let libs = gen_libs_path(format!("{}/libs", profile).as_str()).unwrap();
-    let assets = format!("{}/assets", profile);
+    let libs = gen_libs_path(format!("{}/libs", DOT_MCTUI).as_str()).unwrap();
+    let assets = format!("{}/assets", DOT_MCTUI);
     let game_dir = format!("{}/game", profile);
 
     create_dir_all(game_dir.to_owned()).unwrap();
     // TODO: Split this into separate options
-    let cmd = format!("{} -Xmx1G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, version);
+    let cmd = format!("{} -Xmx1G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, asset_index);
 
     let _logs = Command::new("bash")
         .arg("-c")
         .arg(cmd)
-        .output()
+        .spawn()
         .expect("failed to execute process");
 }

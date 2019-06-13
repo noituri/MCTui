@@ -75,6 +75,6 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
     let _logs = Command::new("bash")
         .arg("-c")
         .arg(cmd)
-        .spawn()
+        .output()
         .expect("failed to execute process");
 }

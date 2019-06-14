@@ -2,13 +2,15 @@ use reqwest;
 use std::fs;
 use std::fs::create_dir_all;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use crate::structs::*;
 use crate::constants::*;
 use crate::utils::files;
+use std::io::{BufReader, BufRead};
+use tui::widgets::Text;
 //use futures::executor::block_on;
 
-pub fn prepare_game(profile_id: &str) {
+pub fn prepare_game<'a>(profile_id: &'a str, logs: &'a mut Vec<Text>) {
     let settings = crate::SETTINGS.lock().unwrap();
     let profile = settings.profiles.get_profile(profile_id);
     if profile.is_none() {
@@ -38,7 +40,8 @@ pub fn prepare_game(profile_id: &str) {
         "/usr/share/lwjgl2/native/linux",
         &settings.auth.username,
         &profile.version,
-        &profile.asset
+        &profile.asset,
+        logs
     );
 }
 
@@ -62,7 +65,7 @@ pub fn gen_libs_path(path: &str) -> Option<String> {
     Some(libs)
 }
 
-pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str) {
+pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, logs: &mut Vec<Text>) {
     println!("Launching Minecraft Instance...");
     let libs = gen_libs_path(format!("{}/libs", DOT_MCTUI).as_str()).unwrap();
     let assets = format!("{}/assets", DOT_MCTUI);
@@ -72,9 +75,21 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
     // TODO: Split this into separate options
     let cmd = format!("{} -Xmx1G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, asset_index);
 
-    let _logs = Command::new("bash")
+    let mut cmd = Command::new("bash")
         .arg("-c")
         .arg(cmd)
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .expect("failed to execute process");
+
+    {
+        let stdout = cmd.stdout.as_mut().unwrap();
+        let stdout_reader = BufReader::new(stdout);
+        let stdout_lines = stdout_reader.lines();
+
+        for line in stdout_lines {
+            logs.push(Text::raw(line.unwrap()))
+        }
+    }
 }

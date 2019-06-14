@@ -7,6 +7,9 @@ use tui::backend::TermionBackend;
 use crate::mctui::events::{Events, Event};
 use tui::Terminal;
 use tui::widgets::{Block, Widget, Borders};
+use tui::layout::{Layout, Direction, Constraint};
+use crate::mctui::logger::render_logger;
+use std::thread;
 
 pub fn start_tui() -> Result<(), failure::Error>  {
     let stdout = std::io::stdout().into_raw_mode()?;
@@ -19,11 +22,24 @@ pub fn start_tui() -> Result<(), failure::Error>  {
     let mut app = App::new();
     let events = Events::new();
 
+    thread::spawn(move|| {
+        let settings = crate::SETTINGS.lock().unwrap();
+        let selected = settings.profiles.selected.to_owned();
+        std::mem::drop(settings);
+        crate::utils::launch::prepare_game(&selected, &mut app.logs)
+    });
+
     loop {
         terminal.draw(|mut f| {
             let size = f.size();
 
-            Block::default().borders(Borders::ALL).render(&mut f, size);
+            Block::default().borders(Borders::NONE).render(&mut f, size);
+            let chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(100)].as_ref())
+                .split(size);
+
+            render_logger(&mut f, chunks[0], &app.logs);
         })?;
 
         if handle_events(&events).is_none() {

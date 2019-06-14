@@ -1,18 +1,18 @@
 use crate::structs::versions;
 use crate::constants::VERSIONS;
 use tui::widgets::Text;
-use std::sync::mpsc::{Receiver, channel};
+use std::sync::mpsc::{Receiver, channel, Sender};
 
-pub struct App<'a> {
+pub struct App {
     pub versions: Option<versions::Versions>,
-    pub logs: Receiver<Vec<Text<'a>>>
+    pub logs: Vec<String>
 }
 
-impl<'a> App<'a> {
-    pub fn new() -> App<'a> {
+impl App {
+    pub fn new() -> App {
         let mut app = App {
             versions: None,
-            logs: channel().1
+            logs: Vec::new()
         };
 
         if *crate::CONNECTION.lock().unwrap() {

@@ -8,9 +8,11 @@ use crate::constants::*;
 use crate::utils::files;
 use std::io::{BufReader, BufRead};
 use tui::widgets::Text;
+use std::sync::mpsc::Sender;
 //use futures::executor::block_on;
 
-pub fn prepare_game<'a>(profile_id: &'a str, logs: &'a mut Vec<Text>) {
+pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
+
     let settings = crate::SETTINGS.lock().unwrap();
     let profile = settings.profiles.get_profile(profile_id);
     if profile.is_none() {
@@ -20,19 +22,19 @@ pub fn prepare_game<'a>(profile_id: &'a str, logs: &'a mut Vec<Text>) {
     let profile = profile.unwrap();
 
 
-    if *crate::CONNECTION.lock().unwrap() {
-        let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
-
-        for v in versions_resp.versions {
-            if v.id == profile.version {
-                let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name);
-
-                for (k, v) in &to_download {
-                    files::download_file(k.to_string(), v)
-                }
-            }
-        }
-    }
+//    if *crate::CONNECTION.lock().unwrap() {
+//        let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
+//
+//        for v in versions_resp.versions {
+//            if v.id == profile.version {
+//                let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name);
+//
+//                for (k, v) in &to_download {
+//                    files::download_file(k.to_string(), v)
+//                }
+//            }
+//        }
+//    }
 
     gen_run_cmd(
         format!("{}/profiles/{}", DOT_MCTUI, profile.name).as_str(),
@@ -41,7 +43,7 @@ pub fn prepare_game<'a>(profile_id: &'a str, logs: &'a mut Vec<Text>) {
         &settings.auth.username,
         &profile.version,
         &profile.asset,
-        logs
+        sender
     );
 }
 
@@ -65,7 +67,7 @@ pub fn gen_libs_path(path: &str) -> Option<String> {
     Some(libs)
 }
 
-pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, logs: &mut Vec<Text>) {
+pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, sender: Sender<String>) {
     println!("Launching Minecraft Instance...");
     let libs = gen_libs_path(format!("{}/libs", DOT_MCTUI).as_str()).unwrap();
     let assets = format!("{}/assets", DOT_MCTUI);
@@ -73,11 +75,11 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
 
     create_dir_all(game_dir.to_owned()).unwrap();
     // TODO: Split this into separate options
-    let cmd = format!("{} -Xmx1G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, asset_index);
+    let final_cmd = format!("{} -Xmx1G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, asset_index);
 
     let mut cmd = Command::new("bash")
         .arg("-c")
-        .arg(cmd)
+        .arg("ls")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -88,8 +90,9 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
         let stdout_reader = BufReader::new(stdout);
         let stdout_lines = stdout_reader.lines();
 
+        let mut output: Vec<String> = Vec::new();
         for line in stdout_lines {
-            logs.push(Text::raw(line.unwrap()))
+            sender.send(line.unwrap()).unwrap();
         }
     }
 }

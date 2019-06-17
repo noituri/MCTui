@@ -10,9 +10,9 @@ use tui::widgets::{Block, Widget, Borders, SelectableList};
 use tui::layout::{Layout, Direction, Constraint};
 use crate::mctui::logger::render_logger;
 use std::thread;
-use std::sync::mpsc::{channel, Receiver, Sender};
 use tui::style::{Color, Modifier, Style};
 use std::sync::{Arc, Mutex};
+use crossbeam_channel::{unbounded, Sender, Receiver};
 
 pub fn start_tui() -> Result<(), failure::Error>  {
     let stdout = std::io::stdout().into_raw_mode()?;
@@ -25,18 +25,8 @@ pub fn start_tui() -> Result<(), failure::Error>  {
     let mut app = App::new();
     let events = Events::new();
 
-    let (s, r): (Sender<String>, Receiver<String>) = channel();
-    let receiver = Arc::new(Mutex::new(r));
-    let mut logs = Vec::new();
-
-    thread::spawn(move || {
-        loop {
-            if receiver.lock().unwrap().try_recv().is_ok() {
-                logs.push(receiver.lock().unwrap().try_recv().unwrap());
-            }
-        }
-    });
-
+    let (s, r) = unbounded();
+//    let receiver = Arc::new(Mutex::new(r));
 
     loop {
         terminal.draw(|mut f| {
@@ -48,7 +38,7 @@ pub fn start_tui() -> Result<(), failure::Error>  {
                 .constraints([Constraint::Percentage(80), Constraint::Percentage(20)].as_ref())
                 .split(size);
 
-            render_logger(&mut f, chunks[0], logs);
+            render_logger(&mut f, chunks[0], r.clone());
             let style = Style::default().fg(Color::Black).bg(Color::White);
 
             SelectableList::default()

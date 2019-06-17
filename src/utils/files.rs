@@ -38,7 +38,7 @@ pub fn download_file(url: String, path: &str) {
                 }
             };
             match io::copy(&mut resp, &mut file) {
-                Ok(_) => println!("File {} has been downloaded", output.display()),
+                Ok(_) => {},//println!("File {} has been downloaded", output.display()),
                 Err(err) => println!("Could not download this file: {} | Error: {}", url, err),
             }
         },

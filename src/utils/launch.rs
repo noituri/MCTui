@@ -8,7 +8,7 @@ use crate::constants::*;
 use crate::utils::files;
 use std::io::{BufReader, BufRead};
 use tui::widgets::Text;
-use std::sync::mpsc::Sender;
+use crossbeam_channel::Sender;
 //use futures::executor::block_on;
 
 pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
@@ -68,7 +68,7 @@ pub fn gen_libs_path(path: &str) -> Option<String> {
 }
 
 pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, sender: Sender<String>) {
-    println!("Launching Minecraft Instance...");
+  //  println!("Launching Minecraft Instance...");
     let libs = gen_libs_path(format!("{}/libs", DOT_MCTUI).as_str()).unwrap();
     let assets = format!("{}/assets", DOT_MCTUI);
     let game_dir = format!("{}/game", profile);
@@ -79,7 +79,7 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
 
     let mut cmd = Command::new("bash")
         .arg("-c")
-        .arg("ls")
+        .arg(final_cmd)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -90,9 +90,8 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
         let stdout_reader = BufReader::new(stdout);
         let stdout_lines = stdout_reader.lines();
 
-        let mut output: Vec<String> = Vec::new();
         for line in stdout_lines {
-            sender.send(line.unwrap()).unwrap();
+            sender.send(format!("{}\n", line.unwrap())).unwrap();
         }
     }
 }

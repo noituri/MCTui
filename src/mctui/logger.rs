@@ -1,4 +1,4 @@
-use tui::widgets::{Block, Borders, Paragraph, Text, Widget};
+use tui::widgets::{Block, Borders, Paragraph, Text, Widget, List};
 use std::slice::Iter;
 use tui::Frame;
 use tui::layout::{Rect, Layout, Constraint};
@@ -18,9 +18,15 @@ pub fn render_logger<B>(backend: &mut Frame<B>, rect: Rect, receiver: Receiver<S
         output.push(log);
     }
 
-    let logs: Vec<Text> = output.iter().map(|log| Text::raw(log)).collect();
-    let mut para = Paragraph::new(logs.iter());
-    para.block(Block::default()
-        .title("Logs")
-        .borders(Borders::ALL)).render(backend, rect);
+    if output.len() as u16 >= rect.height - 2 {
+        output.remove(0);
+    }
+
+    let logs = output.iter().map(|log| Text::raw(log));
+
+    List::new(logs)
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .title("Logs"))
+        .render(backend, rect);
 }

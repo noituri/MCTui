@@ -22,24 +22,24 @@ pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
     let profile = profile.unwrap();
 
 
-//    if *crate::CONNECTION.lock().unwrap() {
-//        let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
+//   if *crate::CONNECTION.lock().unwrap() {
+//       let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
 //
-//        for v in versions_resp.versions {
-//            if v.id == profile.version {
-//                let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name);
+//       for v in versions_resp.versions {
+//           if v.id == profile.version {
+//               let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name);
 //
-//                for (k, v) in &to_download {
-//                    files::download_file(k.to_string(), v)
-//                }
-//            }
-//        }
-//    }
+//               for (k, v) in &to_download {
+//                   files::download_file(k.to_string(), v)
+//               }
+//           }
+//       }
+//   }
 
     gen_run_cmd(
         format!("{}/profiles/{}", DOT_MCTUI, profile.name).as_str(),
-        "/usr/bin/java",
-        "/usr/share/lwjgl2/native/linux",
+        "java",
+        "/home/noituri/Development/lwjgl-2.9.3/native/linux",
         &settings.auth.username,
         &profile.version,
         &profile.asset,

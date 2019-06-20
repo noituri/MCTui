@@ -53,5 +53,9 @@ pub fn create_profile(name: String, version: String, asset: String) {
         settings.profiles.selected = id;
     }
 
-    serde_json::to_writer_pretty(&File::create(format!("{}/mctui.json", DOT_MCTUI)).unwrap(),&*settings).unwrap();
+    save_settings(&*settings);
+}
+
+pub fn save_settings(settings: &crate::settings::Settings) {
+    serde_json::to_writer_pretty(&File::create(format!("{}/mctui.json", DOT_MCTUI)).unwrap(),settings).unwrap();
 }

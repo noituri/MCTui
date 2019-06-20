@@ -30,7 +30,9 @@ pub fn start_tui() -> Result<(), failure::Error> {
         terminal.draw(|mut f| {
             match app.current_window {
                 Window::Home => app.windows.home.render(&mut f, None),
-                Window::Welcome => app.windows.welcome.render(&mut f, None)
+                Window::Welcome => app.windows.welcome.render(&mut f, None),
+                Window::ProfileCreator => app.windows.profile_creator.render(&mut f, None),
+                _ => {}
             }
         })?;
 
@@ -63,6 +65,7 @@ fn handle_events(events: &Events, sender: Sender<String>, app: &mut App) -> Opti
                                 crate::utils::launch::prepare_game(&selected, sender)
                             });
                         }
+                        _ => {}
                     }
                 }
                 Key::Down | Key::Up | Key::Char('\t') => {

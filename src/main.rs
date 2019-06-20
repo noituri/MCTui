@@ -23,9 +23,4 @@ fn main() {
     universal::start_checker();
     // universal::create_profile("test".to_string(), "1.13.2".to_string(), "1.13.1".to_string());
     start_tui().expect("Error occurred");
-//    let settings = SETTINGS.lock().unwrap();
-//    let selected = settings.profiles.selected.to_owned();
-//    std::mem::drop(settings);
-//
-//    launch::prepare_game(&selected);
 }

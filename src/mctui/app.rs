@@ -1,35 +1,33 @@
 use crate::structs::versions;
 use crate::constants::VERSIONS;
 use super::welcome::WelcomeWindow;
-use super::logger::LoggerFrame;
-use tui::widgets::Text;
-use std::sync::mpsc::{Receiver, channel, Sender};
+use super::home::HomeWindow;
 
 pub enum Window {
     Home,
     Welcome
 }
 
-pub struct App {
+pub struct App<'a> {
     pub versions: Option<versions::Versions>,
     pub current_window: Window,
-    pub windows: Windows,
+    pub windows: Windows<'a>,
     pub logs: Vec<String>
 }
 
-pub struct Windows {
+pub struct Windows<'a> {
     pub welcome: WelcomeWindow,
-    pub home: LoggerFrame
+    pub home: HomeWindow<'a>
 }
 
-impl App {
-    pub fn new() -> App {
+impl<'a> App<'a> {
+    pub fn new() -> App<'a> {
         let mut app = App {
             versions: None,
-            current_window: Window::Welcome,
+            current_window: Window::Home,
             windows: Windows {
                 welcome: WelcomeWindow::new(),
-                home: LoggerFrame::new()
+                home: HomeWindow::new()
             },
             logs: Vec::new()
         };

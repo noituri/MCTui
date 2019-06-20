@@ -2,7 +2,7 @@ use reqwest;
 use reqwest::StatusCode;
 use std::fs::File;
 use std::fs::create_dir_all;
-use std::{io, thread};
+use std::io;
 use std::path::Path;
 use sha1::Sha1;
 use sha1::Digest;
@@ -71,7 +71,7 @@ fn verify_file_exists<'a>(file_path: &'a str, hash: &'a str, to_download: &'a mu
 
 pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<String, String> {
     let mut to_download: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
-    let mut assets_resp: assets::Assets = reqwest::get(libs_resp.asset_index.url.as_str()).unwrap().json().unwrap();
+    let assets_resp: assets::Assets = reqwest::get(libs_resp.asset_index.url.as_str()).unwrap().json().unwrap();
     let a_indx_path = format!("{}/assets/indexes", DOT_MCTUI);
 
     verify_file_exists(

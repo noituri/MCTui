@@ -1,6 +1,5 @@
-use std::sync::Mutex;
 use tui::backend::Backend;
-use tui::layout::{Rect, Layout, Direction, Constraint};
+use tui::layout::{Layout, Direction, Constraint};
 use tui::Frame;
 use tui::widgets::{Paragraph, Borders, Text, Block, Widget};
 use tui::style::{Style, Color, Modifier};
@@ -25,21 +24,33 @@ impl WelcomeWindow {
         }
     }
 
-    pub fn render<B>(&mut self, backend: &mut Frame<B>, rect: Rect) where B: Backend  {
+    pub fn render<B>(&mut self, backend: &mut Frame<B>) where B: Backend  {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(2)
+            .constraints([Constraint::Length(3), Constraint::Max(12), Constraint::Max(1)].as_ref())
+            .split(
+                Layout::default().direction(Direction::Horizontal)
+                    .constraints([
+                        Constraint::Percentage(30),
+                        Constraint::Percentage(40),
+                        Constraint::Percentage(30)
+                    ].as_ref()).split(backend.size())[1]);
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
             .constraints([Constraint::Ratio(1,3), Constraint::Ratio(1,3), Constraint::Ratio(1,5)].as_ref())
-            .split(rect);
+            .split(layout[1]);
 
-        Block::default().borders(Borders::ALL).title("Sign In").render(backend, rect);
+        Block::default().borders(Borders::ALL).title("Sign In").render(backend, layout[1]);
 
         Paragraph::new([Text::raw(self.input.0.to_owned())].iter())
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(match self.selected {
                     Selected::Username => Style::default().fg(Color::Cyan).modifier(Modifier::BOLD),
-                    _ => Style::default().fg(Color::Black)
+                    _ => Style::default()
                 })
                 .title("Username or Email"))
             .render(backend, chunks[0]);
@@ -50,7 +61,7 @@ impl WelcomeWindow {
                 .borders(Borders::ALL)
                 .border_style(match self.selected {
                     Selected::Password => Style::default().fg(Color::Cyan).modifier(Modifier::BOLD),
-                    _ => Style::default().fg(Color::Black)
+                    _ => Style::default()
                 })
                 .title("Password"))
             .render(backend, chunks[1]);

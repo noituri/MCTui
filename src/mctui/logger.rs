@@ -1,10 +1,7 @@
-use tui::widgets::{Block, Borders, Paragraph, Text, Widget, List};
-use std::slice::Iter;
+use tui::widgets::{Block, Borders, Text, Widget, List};
 use tui::Frame;
-use tui::layout::{Rect, Layout, Constraint};
+use tui::layout::Rect;
 use tui::backend::Backend;
-use std::sync::{Arc, Mutex};
-use std::thread;
 use crossbeam_channel::Receiver;
 
 //TODO trait

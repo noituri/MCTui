@@ -7,7 +7,6 @@ use crate::structs::*;
 use crate::constants::*;
 use crate::utils::files;
 use std::io::{BufReader, BufRead};
-use tui::widgets::Text;
 use crossbeam_channel::Sender;
 //use futures::executor::block_on;
 

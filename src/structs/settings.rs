@@ -2,7 +2,7 @@ use crate::constants::DOT_MCTUI;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::io::{Write, Read};
-use std::fs::{File, create_dir_all};
+use std::fs::File;
 use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,6 +50,18 @@ impl Settings {
 
         Ok(serde_json::from_str(&contents).unwrap())
     }
+
+    pub fn set_profile(&mut self, id: String) -> Result<(),()> {
+        for p in &self.profiles.profiles {
+            if p.id == id {
+                self.profiles.selected = id;
+                crate::universal::save_settings(self);
+                return Ok(());
+            }
+        }
+
+        Err(())
+    }
 }
 
 impl Profiles {
@@ -61,17 +73,5 @@ impl Profiles {
         }
 
         None
-    }
-
-    pub fn set_profile(&mut self, id: String) -> Result<(),()> {
-        for p in &self.profiles {
-            if p.id == id {
-                self.selected = id;
-                serde_json::to_writer_pretty(&File::create(format!("{}/mctui.json", DOT_MCTUI)).unwrap(),self).unwrap();
-                return Ok(());
-            }
-        }
-
-        Err(())
     }
 }

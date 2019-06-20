@@ -2,6 +2,9 @@ use crate::structs::versions;
 use crate::constants::VERSIONS;
 use super::welcome::WelcomeWindow;
 use super::home::HomeWindow;
+use tui::Frame;
+use tui::layout::Rect;
+use tui::backend::Backend;
 
 pub enum Window {
     Home,
@@ -11,13 +14,13 @@ pub enum Window {
 pub struct App<'a> {
     pub versions: Option<versions::Versions>,
     pub current_window: Window,
-    pub windows: Windows<'a>,
+    pub windows: Windows<WelcomeWindow, HomeWindow<'a>>,
     pub logs: Vec<String>
 }
 
-pub struct Windows<'a> {
-    pub welcome: WelcomeWindow,
-    pub home: HomeWindow<'a>
+pub struct Windows<W, H> where W: WinWidget, H: WinWidget {
+    pub welcome: W,
+    pub home: H
 }
 
 impl<'a> App<'a> {
@@ -38,4 +41,9 @@ impl<'a> App<'a> {
 
         app
     }
+}
+
+pub trait WinWidget {
+    fn new() -> Self;
+    fn render<B>(&mut self, _: &mut Frame<B>, _: Option<Rect>) where B: Backend;
 }

@@ -1,4 +1,4 @@
-use crate::mctui::app::{App, Window};
+use crate::mctui::app::{App, Window, WinWidget};
 use crate::SETTINGS;
 use crate::universal::save_settings;
 use termion::event::Key;
@@ -24,12 +24,13 @@ pub fn start_tui() -> Result<(), failure::Error> {
     let events = Events::new();
 
     let (s, r) = unbounded();
+    app.windows.home.receiver = Some(r);
 
     loop {
         terminal.draw(|mut f| {
             match app.current_window {
-                Window::Home => app.windows.home.render(&mut f, r.clone()),
-                Window::Welcome => app.windows.welcome.render(&mut f)
+                Window::Home => app.windows.home.render(&mut f, None),
+                Window::Welcome => app.windows.welcome.render(&mut f, None)
             }
         })?;
 

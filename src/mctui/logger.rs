@@ -3,21 +3,25 @@ use tui::Frame;
 use tui::layout::Rect;
 use tui::backend::Backend;
 use crossbeam_channel::Receiver;
-
-//TODO trait
+use super::app::WinWidget;
 
 pub struct LoggerFrame {
+    pub receiver: Option<Receiver<String>>,
     output: Vec<String>
 }
 
-impl LoggerFrame {
-    pub fn new() -> LoggerFrame {
+impl WinWidget for LoggerFrame {
+    fn new() -> LoggerFrame {
         LoggerFrame {
+            receiver: None,
             output: Vec::new()
         }
     }
 
-    pub fn render<B>(&mut self, backend: &mut Frame<B>, rect: Rect, receiver: Receiver<String>) where B: Backend {
+    fn render<B>(&mut self, backend: &mut Frame<B>, rect: Option<Rect>) where B: Backend {
+        let receiver = self.receiver.to_owned().unwrap();
+        let rect = rect.unwrap();
+
         for log in receiver.try_iter() {
             self.output.push(log);
         }

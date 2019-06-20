@@ -1,10 +1,9 @@
 use tui::backend::Backend;
-use tui::layout::{Layout, Direction, Constraint};
+use tui::layout::{Layout, Direction, Constraint, Rect};
 use tui::Frame;
 use tui::widgets::{Paragraph, Borders, Text, Block, Widget};
 use tui::style::{Style, Color, Modifier};
-
-//TODO trait
+use super::app::WinWidget;
 
 pub enum Selected {
     Username,
@@ -16,15 +15,15 @@ pub struct WelcomeWindow {
     pub selected: Selected
 }
 
-impl WelcomeWindow {
-    pub fn new() -> WelcomeWindow {
+impl WinWidget for WelcomeWindow {
+    fn new() -> WelcomeWindow {
         WelcomeWindow {
             input: (String::new(), String::new()),
             selected: Selected::Username
         }
     }
 
-    pub fn render<B>(&mut self, backend: &mut Frame<B>) where B: Backend  {
+    fn render<B>(&mut self, backend: &mut Frame<B>, _rect: Option<Rect>) where B: Backend  {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .margin(2)

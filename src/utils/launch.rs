@@ -1,12 +1,13 @@
 use reqwest;
 use std::fs;
-use std::fs::create_dir_all;
+use std::fs::{create_dir_all, File};
 use std::path::Path;
 use std::process::{Command, Stdio};
 use crate::structs::*;
 use crate::constants::*;
 use crate::utils::files;
 use std::io::{BufReader, BufRead};
+use std::io::{Write, Read};
 use crossbeam_channel::Sender;
 //use futures::executor::block_on;
 
@@ -26,19 +27,23 @@ pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
 
        for v in versions_resp.versions {
            if v.id == profile.version {
-               let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name, sender.clone());
+               sender.send("Verifying files".to_string());
+               let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name);
 
+               sender.send("Downloading files".to_string());
                for (k, v) in &to_download {
                    files::download_file(k.to_string(), v);
-                   sender.send(format!("File '{}' has been downloaded", v));
                }
            }
        }
+   } else {
+       //TODO should verify files but not download them
+       unimplemented!();
    }
 
     gen_run_cmd(
         format!("{}/profiles/{}", DOT_MCTUI, profile.name).as_str(),
-        "java",
+        "steam-run /home/noituri/Development/jdk/bin/java",
         "/home/noituri/Development/lwjgl-2.9.3/native/linux/",
         &settings.auth.username,
         &profile.version,
@@ -47,19 +52,68 @@ pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
     );
 }
 
-pub fn gen_libs_path(path: &str) -> Option<String> {
+//TODO yeah ikr code duplication
+pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
     let libs_path = Path::new(path);
 
     if !libs_path.exists() || libs_path.is_file() {
         return None;
     }
 
+    let mut file = File::open(format!("{}/version.json", profile)).unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+    let version: libraries::Libraries = serde_json::from_str(&contents).unwrap();
+
     let mut libs = String::new();
-    for entry in fs::read_dir(libs_path).unwrap() {
-        if let Ok(entry) = entry {
-            if entry.path().is_file() {
-                libs.push_str(format!("{}/{}:", path, entry.file_name().to_str().unwrap()).as_str());
-            }
+
+    for lib in version.libraries.iter() {
+        match &lib.downloads.artifact {
+            Some(artifact) => {
+                let file_name= artifact.path.to_owned().unwrap();
+                let file_name = file_name.split("/").last().unwrap();
+
+                libs.push_str(format!("{}/{}/{}:", path, artifact.path.to_owned().unwrap(), file_name).as_str());
+            },
+            None => {}
+        }
+
+        match &lib.downloads.classifiers {
+            Some(classifiers) => {
+                #[cfg(target_os = "linux")]
+                    match &classifiers.natives_linux {
+                    Some(native) => {
+                        let file_name= native.path.to_owned().unwrap();
+                        let file_name = file_name.split("/").last().unwrap();
+
+                        libs.push_str(format!("{}/{}/{}:", path, native.path.to_owned().unwrap(), file_name).as_str());
+                    },
+                    None => {}
+                }
+
+                #[cfg(target_os = "macos")]
+                    match &classifiers.natives_osx {
+                    Some(native) => {
+                        let file_name= native.path.to_owned().unwrap();
+                        let file_name = file_name.split("/").last().unwrap();
+
+                        libs.push_str(format!("{}/{}/{}:", path, native.path.to_owned().unwrap(), file_name).as_str());
+                    },
+                    None => {}
+                }
+
+                #[cfg(target_os = "windows")]
+                    match &classifiers.natives_windows {
+                    Some(native) => {
+                        let file_name= native.path.to_owned().unwrap();
+                        let file_name = file_name.split("/").last().unwrap();
+
+                        libs.push_str(format!("{}/{}/{}:", path, native.path.to_owned().unwrap(), file_name).as_str());
+                    },
+                    None => {}
+                }
+            },
+            None => {}
         }
     }
 
@@ -68,15 +122,15 @@ pub fn gen_libs_path(path: &str) -> Option<String> {
 }
 
 pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, sender: Sender<String>) {
-  //  println!("Launching Minecraft Instance...");
-    let libs = gen_libs_path(format!("{}/libs", DOT_MCTUI).as_str()).unwrap();
+    sender.send("Launching Minecraft Instance...".to_string());
+
+    let libs = gen_libs_path(format!("{}/libs", DOT_MCTUI).as_str(), profile).unwrap();
     let assets = format!("{}/assets", DOT_MCTUI);
     let game_dir = format!("{}/game", profile);
 
     create_dir_all(game_dir.to_owned()).unwrap();
     // TODO: Split this into separate options
     let final_cmd = format!("{} -Xmx8G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, asset_index);
-    sender.send("Iam here".to_string());
     let mut cmd = Command::new("bash")
         .arg("-c")
         .arg(final_cmd)

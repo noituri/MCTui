@@ -1,4 +1,5 @@
 use crate::mctui::app::{App, Window, WinWidget};
+use crate::structs::libraries::Libraries;
 use crate::SETTINGS;
 use crate::universal::save_settings;
 use termion::event::Key;
@@ -65,23 +66,69 @@ fn handle_events(events: &Events, sender: Sender<String>, app: &mut App) -> Opti
                                 crate::utils::launch::prepare_game(&selected, sender)
                             });
                         }
+                        Window::ProfileCreator => {
+                            let selected_version = &app.windows.profile_creator.versions[app.windows.profile_creator.selected_version];
+                            let assets_resp: Libraries = reqwest::get(selected_version.url.as_str()).unwrap().json().unwrap();
+                            crate::universal::create_profile(
+                                app.windows.profile_creator.input_name.to_owned(),
+                                selected_version.id.to_owned(),
+                                assets_resp.asset_index.id
+                            );
+                        }
                         _ => {}
                     }
                 }
-                Key::Down | Key::Up | Key::Char('\t') => {
-                    match app.windows.welcome.selected {
-                        Selected::Username => app.windows.welcome.selected = Selected::Password,
-                        Selected::Password => app.windows.welcome.selected = Selected::Username
+                Key::Down | Key::Char('\t') => {
+                    match app.current_window {
+                        Window::Welcome => {
+                            match app.windows.welcome.selected {
+                                Selected::Username => app.windows.welcome.selected = Selected::Password,
+                                Selected::Password => app.windows.welcome.selected = Selected::Username
+                            }
+                        }
+                        Window::ProfileCreator => {
+                            if app.windows.profile_creator.selected_version + 1 != app.windows.profile_creator.versions.len() {
+                                app.windows.profile_creator.selected_version += 1;
+                            } else {
+                                app.windows.profile_creator.selected_version = 0;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Key::Up => {
+                    match app.current_window {
+                        Window::Welcome => {
+                            match app.windows.welcome.selected {
+                                Selected::Username => app.windows.welcome.selected = Selected::Password,
+                                Selected::Password => app.windows.welcome.selected = Selected::Username
+                            }
+                        }
+                        Window::ProfileCreator => {
+                            if app.windows.profile_creator.selected_version > 0 {
+                                app.windows.profile_creator.selected_version -= 1;
+                            } else {
+                                app.windows.profile_creator.selected_version = app.windows.profile_creator.versions.len() - 1;
+                            }
+                        }
+                        _ => {}
                     }
                 }
                 Key::Backspace => {
                     match app.current_window {
                         Window::Welcome => {
                             match app.windows.welcome.selected {
-                                Selected::Username => app.windows.welcome.input.0.pop(),
-                                Selected::Password => app.windows.welcome.input.1.pop()
+                                Selected::Username => {
+                                    app.windows.welcome.input.0.pop();
+                                },
+                                Selected::Password => {
+                                    app.windows.welcome.input.1.pop();
+                                }
                             };
                         }
+                        Window::ProfileCreator => {
+                            app.windows.profile_creator.input_name.pop();
+                        },
                         _ => {}
                     }
                 }
@@ -93,6 +140,7 @@ fn handle_events(events: &Events, sender: Sender<String>, app: &mut App) -> Opti
                                 Selected::Password => app.windows.welcome.input.1.push(ch)
                             }
                         }
+                        Window::ProfileCreator => app.windows.profile_creator.input_name.push(ch),
                         _ => {}
                     }
                 },

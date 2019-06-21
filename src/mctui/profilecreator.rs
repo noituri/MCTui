@@ -1,5 +1,6 @@
 use super::app::WinWidget;
 use crate::structs::versions;
+use crate::constants::VERSIONS;
 use tui::Frame;
 use tui::layout::{Rect, Layout, Direction, Constraint};
 use tui::backend::Backend;
@@ -7,31 +8,19 @@ use tui::widgets::{Paragraph, Text, Block, Widget, Borders, SelectableList};
 use tui::style::{Style, Color, Modifier};
 
 pub struct ProfileCreatorWindow {
-    pub input: (String, String),
+    pub input_name: String,
+    pub selected_version: usize,
     pub versions: Vec<versions::Version>
 }
 
 impl WinWidget for ProfileCreatorWindow {
     fn new() -> ProfileCreatorWindow {
+        let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
+
         ProfileCreatorWindow {
-            input: (String::new(), String::new()),
-            versions: vec![
-                versions::Version {
-                    id: "1.13.2".to_string(),
-                    v_type: String::new(),
-                    url: String::new(),
-                    time: String::new(),
-                    release_time: String::new()
-                },
-                versions::Version {
-                    id: "1.12.2".to_string(),
-                    v_type: String::new(),
-                    url: String::new(),
-                    time: String::new(),
-                    release_time: String::new()
-                }
-            ],
-//            versions: Vec::new()
+            input_name: String::new(),
+            selected_version: 0,
+            versions: versions_resp.versions,
         }
     }
 
@@ -56,7 +45,7 @@ impl WinWidget for ProfileCreatorWindow {
 
         Block::default().borders(Borders::ALL).title("Profile creator").render(backend, layout[1]);
 
-        Paragraph::new([Text::raw(self.input.0.to_owned())].iter())
+        Paragraph::new([Text::raw(self.input_name.to_owned())].iter())
             .block(Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Cyan).modifier(Modifier::BOLD))
@@ -68,7 +57,7 @@ impl WinWidget for ProfileCreatorWindow {
         SelectableList::default()
             .block(Block::default().borders(Borders::ALL).title("Options"))
             .items(&versions)
-            .select(Some(0))
+            .select(Some(self.selected_version))
             .highlight_style(Style::default().fg(Color::LightGreen).modifier(Modifier::BOLD))
             .highlight_symbol(">")
             .render(backend, chunks[1]);

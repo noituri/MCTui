@@ -56,6 +56,12 @@ fn handle_events(events: &Events, sender: Sender<String>, app: &mut App) -> Opti
                             let mut settings = SETTINGS.lock().unwrap();
                             settings.auth.username = app.windows.welcome.input.0.to_owned();
                             save_settings(&*settings);
+
+                            if settings.profiles.profiles.len() == 0 {
+                                app.current_window = Window::ProfileCreator;
+                            } else {
+                                app.current_window = Window::Home;
+                            }
                         }
                         Window::Home => {
                             let settings = crate::SETTINGS.lock().unwrap();
@@ -74,6 +80,8 @@ fn handle_events(events: &Events, sender: Sender<String>, app: &mut App) -> Opti
                                 selected_version.id.to_owned(),
                                 assets_resp.asset_index.id
                             );
+
+                            app.current_window = Window::Home;
                         }
                         _ => {}
                     }

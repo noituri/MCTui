@@ -12,10 +12,6 @@ pub fn start_checker() {
 
     *crate::CONNECTION.lock().unwrap() = output.status.success();
 
-    if settings.auth.username == "" && !settings.auth.online {
-        settings.auth.username = "Steve".to_string();
-    }
-
     if settings.auth.online {
         // TODO Yggdrasil
         panic!("implement me");

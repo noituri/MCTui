@@ -21,6 +21,5 @@ fn main() {
     create_dir_all(DOT_MCTUI).unwrap();
     std::env::set_current_dir(Path::new(DOT_MCTUI)).unwrap();
     universal::start_checker();
-    // universal::create_profile("test".to_string(), "1.13.2".to_string(), "1.13.1".to_string());
     start_tui().expect("Error occurred");
 }

@@ -21,24 +21,25 @@ pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
     let profile = profile.unwrap();
 
 
-//   if *crate::CONNECTION.lock().unwrap() {
-//       let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
-//
-//       for v in versions_resp.versions {
-//           if v.id == profile.version {
-//               let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name);
-//
-//               for (k, v) in &to_download {
-//                   files::download_file(k.to_string(), v)
-//               }
-//           }
-//       }
-//   }
+   if *crate::CONNECTION.lock().unwrap() {
+       let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
+
+       for v in versions_resp.versions {
+           if v.id == profile.version {
+               let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name, sender.clone());
+
+               for (k, v) in &to_download {
+                   files::download_file(k.to_string(), v);
+                   sender.send(format!("File '{}' has been downloaded", v));
+               }
+           }
+       }
+   }
 
     gen_run_cmd(
         format!("{}/profiles/{}", DOT_MCTUI, profile.name).as_str(),
         "java",
-        "/home/noituri/Development/lwjgl-2.9.3/native/linux",
+        "/home/noituri/Development/lwjgl-2.9.3/native/linux/",
         &settings.auth.username,
         &profile.version,
         &profile.asset,
@@ -74,8 +75,8 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
 
     create_dir_all(game_dir.to_owned()).unwrap();
     // TODO: Split this into separate options
-    let final_cmd = format!("{} -Xmx1G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, asset_index);
-
+    let final_cmd = format!("{} -Xmx8G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, asset_index);
+    sender.send("Iam here".to_string());
     let mut cmd = Command::new("bash")
         .arg("-c")
         .arg(final_cmd)

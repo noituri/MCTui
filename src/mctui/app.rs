@@ -1,5 +1,6 @@
 use crate::structs::versions;
 use crate::constants::VERSIONS;
+use crate::SETTINGS;
 use super::welcome::WelcomeWindow;
 use super::home::HomeWindow;
 use super::profilecreator::ProfileCreatorWindow;
@@ -26,8 +27,15 @@ pub struct Windows<W, H, P> where W: WinWidget, H: WinWidget, P: WinWidget {
 
 impl<'a> App<'a> {
     pub fn new() -> App<'a> {
+        let settings = SETTINGS.lock().unwrap();
+        let mut current_window = Window::Welcome;
+
+        if settings.auth.username != "" {
+            current_window = Window::Home;
+        }
+
         App {
-            current_window: Window::ProfileCreator,
+            current_window,
             windows: Windows {
                 welcome: WelcomeWindow::new(),
                 home: HomeWindow::new(),

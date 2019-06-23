@@ -35,8 +35,6 @@ impl<'a> App<'a> {
             current_window = Window::Home;
         }
 
-        current_window = Window::ProfileCreator;
-
         App {
             current_window,
             windows: Windows {

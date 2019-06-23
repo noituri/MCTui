@@ -3,7 +3,8 @@ use tui::layout::Rect;
 use tui::Frame;
 use tui::widgets::{Borders, Block, Widget, SelectableList};
 use tui::style::{Style, Color, Modifier};
-use super::app::WinWidget;
+use super::app::{WinWidget, Window};
+use termion::event::Key;
 
 pub struct BottomNav<'a> {
     pub items: Items<'a>,
@@ -20,6 +21,10 @@ impl<'a> WinWidget for BottomNav<'a> {
               middle: vec!["Play"],
             }
         }
+    }
+
+    fn handle_events(&mut self, key: Key) -> Option<Window> {
+        unimplemented!()
     }
 
     fn render<B>(&mut self, backend: &mut Frame<B>, rect: Option<Rect>) where B: Backend {

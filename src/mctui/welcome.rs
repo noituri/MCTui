@@ -4,26 +4,72 @@ use tui::Frame;
 use tui::widgets::{Paragraph, Borders, Text, Block, Widget};
 use tui::style::{Style, Color, Modifier};
 use super::app::WinWidget;
+use crate::mctui::events::{Events, Event};
+use termion::event::Key;
+use super::app::{App, Window};
+use crate::SETTINGS;
+use crate::universal::save_settings;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 pub enum Selected {
     Username,
-    Password
+    Password,
 }
 
 pub struct WelcomeWindow {
     pub input: (String, String),
-    pub selected: Selected
+    pub selected: Selected,
 }
 
 impl WinWidget for WelcomeWindow {
     fn new() -> WelcomeWindow {
         WelcomeWindow {
             input: (String::new(), String::new()),
-            selected: Selected::Username
+            selected: Selected::Username,
         }
     }
 
-    fn render<B>(&mut self, backend: &mut Frame<B>, _rect: Option<Rect>) where B: Backend  {
+    fn handle_events(&mut self, key: Key) -> Option<Window> {
+        match key {
+            Key::Char('\n') => {
+                let mut settings = SETTINGS.lock().unwrap();
+                settings.auth.username = self.input.0.to_owned();
+                save_settings(&*settings);
+
+                if settings.profiles.profiles.len() == 0 {
+                    return Some(Window::ProfileCreator);
+                } else {
+                    return Some(Window::Home);
+                }
+            }
+            Key::Down | Key::Up | Key::Char('\t') => {
+                match self.selected {
+                    Selected::Username => self.selected = Selected::Password,
+                    Selected::Password => self.selected = Selected::Username
+                }
+            }
+            Key::Backspace => {
+                match self.selected {
+                    Selected::Username => {
+                        self.input.0.pop();
+                    }
+                    Selected::Password => {
+                        self.input.1.pop();
+                    }
+                };
+            }
+            Key::Char(ch) => {
+                match self.selected {
+                    Selected::Username => self.input.0.push(ch),
+                    Selected::Password => self.input.1.push(ch)
+                }
+            }
+            _ => {}
+        }
+        None
+    }
+
+    fn render<B>(&mut self, backend: &mut Frame<B>, _rect: Option<Rect>) where B: Backend {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .margin(2)
@@ -39,7 +85,7 @@ impl WinWidget for WelcomeWindow {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Ratio(1,3), Constraint::Ratio(1,3), Constraint::Ratio(1,5)].as_ref())
+            .constraints([Constraint::Ratio(1, 3), Constraint::Ratio(1, 3), Constraint::Ratio(1, 5)].as_ref())
             .split(layout[1]);
 
         Block::default().borders(Borders::ALL).title("Sign In").render(backend, layout[1]);
@@ -65,16 +111,16 @@ impl WinWidget for WelcomeWindow {
                 .title("Password"))
             .render(backend, chunks[1]);
 
-            let style = Style::default().fg(Color::Cyan).modifier(Modifier::BOLD);
-            Paragraph::new([
-                    Text::raw(" Press "),
-                    Text::styled("enter", style),
-                    Text::raw(" to submit"),
-                    Text::raw("\n Leave password empty if you want to use offline mode")
-                ]
-                .iter())
-                .wrap(true)
-                .block(Block::default().borders(Borders::TOP))
-                .render(backend, chunks[2]);
+        let style = Style::default().fg(Color::Cyan).modifier(Modifier::BOLD);
+        Paragraph::new([
+            Text::raw(" Press "),
+            Text::styled("enter", style),
+            Text::raw(" to submit"),
+            Text::raw("\n Leave password empty if you want to use offline mode")
+        ]
+            .iter())
+            .wrap(true)
+            .block(Block::default().borders(Borders::TOP))
+            .render(backend, chunks[2]);
     }
 }

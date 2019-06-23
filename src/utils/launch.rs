@@ -48,6 +48,7 @@ pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
         &settings.auth.username,
         &profile.version,
         &profile.asset,
+        &profile.args,
         sender
     );
 }
@@ -121,7 +122,7 @@ pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
     Some(libs)
 }
 
-pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, sender: Sender<String>) {
+pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, args: &str, sender: Sender<String>) {
     sender.send("Launching Minecraft Instance...".to_string());
 
     let libs = gen_libs_path(format!("{}/libs", DOT_MCTUI).as_str(), profile).unwrap();
@@ -130,7 +131,7 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
 
     create_dir_all(game_dir.to_owned()).unwrap();
     // TODO: Split this into separate options
-    let final_cmd = format!("{} -Xmx8G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, natives, libs, profile, username, version, game_dir, assets, asset_index);
+    let final_cmd = format!("{} {} -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, args, natives, libs, profile, username, version, game_dir, assets, asset_index);
     let mut cmd = Command::new("bash")
         .arg("-c")
         .arg(final_cmd)

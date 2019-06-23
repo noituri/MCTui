@@ -1,27 +1,74 @@
 use super::app::WinWidget;
 use crate::structs::versions;
 use crate::constants::VERSIONS;
+use crate::structs::libraries::Libraries;
 use tui::Frame;
 use tui::layout::{Rect, Layout, Direction, Constraint};
 use tui::backend::Backend;
 use tui::widgets::{Paragraph, Text, Block, Widget, Borders, SelectableList};
 use tui::style::{Style, Color, Modifier};
+use termion::event::Key;
+use super::app::Window;
 
 pub struct ProfileCreatorWindow {
-    pub input_name: String,
+    pub input: (String, String),
     pub selected_version: usize,
-    pub versions: Vec<versions::Version>
+    pub versions: Vec<versions::Version>,
 }
+
+//pub struct Selected {
+//
+//}
 
 impl WinWidget for ProfileCreatorWindow {
     fn new() -> ProfileCreatorWindow {
         let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
 
         ProfileCreatorWindow {
-            input_name: String::new(),
+            input: (String::new(), "-Xmx8G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M".to_string()),
             selected_version: 0,
             versions: versions_resp.versions,
         }
+    }
+
+    fn handle_events(&mut self, key: Key) -> Option<Window> {
+        match key {
+            Key::Char('\n') => {
+                let selected_version = &self.versions[self.selected_version];
+                //TODO check connection
+                let assets_resp: Libraries = reqwest::get(selected_version.url.as_str()).unwrap().json().unwrap();
+                crate::universal::create_profile(
+                    self.input.0.to_owned(),
+                    selected_version.id.to_owned(),
+                    assets_resp.asset_index.id,
+                    self.input.1.to_owned(),
+                );
+
+                return Some(Window::Home);
+            }
+            Key::Down => {
+                if self.selected_version + 1 != self.versions.len() {
+                    self.selected_version += 1;
+                } else {
+                    self.selected_version = 0;
+                }
+            }
+            Key::Up => {
+                if self.selected_version > 0 {
+                    self.selected_version -= 1;
+                } else {
+                    self.selected_version = self.versions.len() - 1;
+                }
+            }
+            Key::Backspace => {
+                self.input.0.pop();
+            }
+            Key::Char(ch) => {
+                self.input.0.push(ch);
+            }
+            _ => {}
+        }
+        None
     }
 
     fn render<B>(&mut self, backend: &mut Frame<B>, _: Option<Rect>) where B: Backend {
@@ -40,17 +87,24 @@ impl WinWidget for ProfileCreatorWindow {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Ratio(1,4), Constraint::Ratio(1,2), Constraint::Ratio(1,4)].as_ref())
+            .constraints([Constraint::Ratio(1, 4), Constraint::Ratio(1, 2), Constraint::Ratio(1, 4)].as_ref())
             .split(layout[1]);
 
         Block::default().borders(Borders::ALL).title("Profile creator").render(backend, layout[1]);
 
-        Paragraph::new([Text::raw(self.input_name.to_owned())].iter())
+        Paragraph::new([Text::raw(self.input.0.to_owned())].iter())
             .block(Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Cyan).modifier(Modifier::BOLD))
-            .title("Name"))
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan).modifier(Modifier::BOLD))
+                .title("Name"))
             .render(backend, chunks[0]);
+
+//        Paragraph::new([Text::raw(self.input.1.to_owned())].iter())
+//            .block(Block::default()
+//                .borders(Borders::ALL)
+//                .border_style(Style::default().fg(Color::Cyan).modifier(Modifier::BOLD))
+//                .title("Args"))
+//            .render(backend, chunks[0]);
 
         let versions: Vec<String> = self.versions.iter().map(|v| v.id.to_owned()).collect();
 

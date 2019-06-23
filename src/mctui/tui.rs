@@ -25,6 +25,7 @@ pub fn start_tui() -> Result<(), failure::Error> {
     let events = Events::new();
 
     let (s, r) = unbounded();
+    app.windows.home.sender = Some(s);
     app.windows.home.receiver = Some(r);
 
     loop {
@@ -33,11 +34,10 @@ pub fn start_tui() -> Result<(), failure::Error> {
                 Window::Home => app.windows.home.render(&mut f, None),
                 Window::Welcome => app.windows.welcome.render(&mut f, None),
                 Window::ProfileCreator => app.windows.profile_creator.render(&mut f, None),
-                _ => {}
             }
         })?;
 
-        if handle_events(&events, s.clone(), &mut app).is_none() {
+        if handle_events(&events, &mut app).is_none() {
             break;
         }
     }
@@ -45,117 +45,38 @@ pub fn start_tui() -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn handle_events(events: &Events, sender: Sender<String>, app: &mut App) -> Option<()> {
+fn handle_events(events: &Events, app: &mut App) -> Option<()> {
     match events.next().unwrap() {
         Event::Input(input) => {
-            match input {
-                Key::Char('q') => return None,
-                Key::Char('\n') => {
-                    match app.current_window {
-                        Window::Welcome => {
-                            let mut settings = SETTINGS.lock().unwrap();
-                            settings.auth.username = app.windows.welcome.input.0.to_owned();
-                            save_settings(&*settings);
+            if input == Key::Char('q') {
+                return None
+            }
 
-                            if settings.profiles.profiles.len() == 0 {
-                                app.current_window = Window::ProfileCreator;
-                            } else {
-                                app.current_window = Window::Home;
-                            }
-                        }
-                        Window::Home => {
-                            let settings = crate::SETTINGS.lock().unwrap();
-                            let selected = settings.profiles.selected.to_owned();
-                            std::mem::drop(settings);
+            match app.current_window {
+                Window::Welcome => {
+                    match app.windows.welcome.handle_events(input) {
+                        Some(route) => app.current_window = route,
+                        None => {}
+                    }
 
-                            thread::spawn(move || {
-                                crate::utils::launch::prepare_game(&selected, sender)
-                            });
-                        }
-                        Window::ProfileCreator => {
-                            let selected_version = &app.windows.profile_creator.versions[app.windows.profile_creator.selected_version];
-                            let assets_resp: Libraries = reqwest::get(selected_version.url.as_str()).unwrap().json().unwrap();
-                            crate::universal::create_profile(
-                                app.windows.profile_creator.input_name.to_owned(),
-                                selected_version.id.to_owned(),
-                                assets_resp.asset_index.id
-                            );
+                },
+                Window::ProfileCreator => {
+                    match app.windows.profile_creator.handle_events(input) {
+                        Some(route) => app.current_window = route,
+                        None => {}
+                    }
 
-                            app.current_window = Window::Home;
-                        }
-                        _ => {}
-                    }
-                }
-                Key::Down | Key::Char('\t') => {
-                    match app.current_window {
-                        Window::Welcome => {
-                            match app.windows.welcome.selected {
-                                Selected::Username => app.windows.welcome.selected = Selected::Password,
-                                Selected::Password => app.windows.welcome.selected = Selected::Username
-                            }
-                        }
-                        Window::ProfileCreator => {
-                            if app.windows.profile_creator.selected_version + 1 != app.windows.profile_creator.versions.len() {
-                                app.windows.profile_creator.selected_version += 1;
-                            } else {
-                                app.windows.profile_creator.selected_version = 0;
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                Key::Up => {
-                    match app.current_window {
-                        Window::Welcome => {
-                            match app.windows.welcome.selected {
-                                Selected::Username => app.windows.welcome.selected = Selected::Password,
-                                Selected::Password => app.windows.welcome.selected = Selected::Username
-                            }
-                        }
-                        Window::ProfileCreator => {
-                            if app.windows.profile_creator.selected_version > 0 {
-                                app.windows.profile_creator.selected_version -= 1;
-                            } else {
-                                app.windows.profile_creator.selected_version = app.windows.profile_creator.versions.len() - 1;
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                Key::Backspace => {
-                    match app.current_window {
-                        Window::Welcome => {
-                            match app.windows.welcome.selected {
-                                Selected::Username => {
-                                    app.windows.welcome.input.0.pop();
-                                },
-                                Selected::Password => {
-                                    app.windows.welcome.input.1.pop();
-                                }
-                            };
-                        }
-                        Window::ProfileCreator => {
-                            app.windows.profile_creator.input_name.pop();
-                        },
-                        _ => {}
-                    }
-                }
-                Key::Char(ch) => {
-                    match app.current_window {
-                        Window::Welcome => {
-                            match app.windows.welcome.selected {
-                                Selected::Username => app.windows.welcome.input.0.push(ch),
-                                Selected::Password => app.windows.welcome.input.1.push(ch)
-                            }
-                        }
-                        Window::ProfileCreator => app.windows.profile_creator.input_name.push(ch),
-                        _ => {}
+                },
+                Window::Home => {
+                    match app.windows.home.handle_events(input) {
+                        Some(route) => app.current_window = route,
+                        None => {}
                     }
                 },
-                _ => {}
             }
         }
         _ => {}
     }
+
     Some(())
 }

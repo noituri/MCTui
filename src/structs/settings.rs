@@ -30,7 +30,8 @@ pub struct Profile {
     pub id: String,
     pub name: String,
     pub version: String,
-    pub asset: String
+    pub asset: String,
+    pub args: String
 }
 
 impl Settings {

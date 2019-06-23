@@ -7,6 +7,7 @@ use super::profilecreator::ProfileCreatorWindow;
 use tui::Frame;
 use tui::layout::Rect;
 use tui::backend::Backend;
+use termion::event::Key;
 
 pub enum Window {
     Home,
@@ -47,5 +48,6 @@ impl<'a> App<'a> {
 
 pub trait WinWidget {
     fn new() -> Self;
+    fn handle_events(&mut self, key: Key) -> Option<Window>;
     fn render<B>(&mut self, _: &mut Frame<B>, _: Option<Rect>) where B: Backend;
 }

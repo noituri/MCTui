@@ -29,6 +29,13 @@ impl WinWidget for ProfilesTab {
             Key::Char('n') => {
                 return Some(Window::ProfileCreator(String::new()))
             }
+            Key::Char('d') => {
+                let settings = SETTINGS.lock().unwrap();
+                let id = settings.profiles.profiles[self.selected_index].id.to_owned();
+                std::mem::drop(settings);
+
+                crate::universal::delete_profile(id);
+            }
             Key::Down => {
                 if self.selected_index + 1 != self.profiles_len {
                     self.selected_index += 1;

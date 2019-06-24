@@ -66,6 +66,14 @@ pub fn edit_profile(id: String, name: String, version: String) {
     save_settings(&*settings);
 }
 
+pub fn delete_profile(id: String) {
+    let mut settings = SETTINGS.lock().unwrap();
+
+    let index = settings.profiles.profiles.iter().position(|p| *p.id == id).unwrap();
+    settings.profiles.profiles.remove(index);
+    save_settings(&*settings);
+}
+
 pub fn save_settings(settings: &crate::settings::Settings) {
     serde_json::to_writer_pretty(&File::create(format!("{}/mctui.json", DOT_MCTUI)).unwrap(),settings).unwrap();
 }

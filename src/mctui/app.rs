@@ -10,9 +10,9 @@ use tui::backend::Backend;
 use termion::event::Key;
 
 pub enum Window {
-    Home,
-    Welcome,
-    ProfileCreator
+    Home(String),
+    Welcome(String),
+    ProfileCreator(String)
 }
 
 pub struct App<'a> {
@@ -29,10 +29,10 @@ pub struct Windows<W, H, P> where W: WinWidget, H: WinWidget, P: WinWidget {
 impl<'a> App<'a> {
     pub fn new() -> App<'a> {
         let settings = SETTINGS.lock().unwrap();
-        let mut current_window = Window::Welcome;
+        let mut current_window = Window::Welcome(String::new());
 
         if settings.auth.username != "" {
-            current_window = Window::Home;
+            current_window = Window::Home(String::new());
         }
 
         App {

@@ -37,9 +37,9 @@ impl WinWidget for WelcomeWindow {
                 save_settings(&*settings);
 
                 if settings.profiles.profiles.len() == 0 {
-                    return Some(Window::ProfileCreator);
+                    return Some(Window::ProfileCreator(String::new()));
                 } else {
-                    return Some(Window::Home);
+                    return Some(Window::Home(String::new()));
                 }
             }
             Key::Down | Key::Up | Key::Char('\t') => {

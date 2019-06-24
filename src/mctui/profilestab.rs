@@ -22,6 +22,10 @@ impl WinWidget for ProfilesTab {
 
     fn handle_events(&mut self, key: Key) -> Option<Window> {
         match key {
+            Key::Char('\n') => {
+                let settings = SETTINGS.lock().unwrap();
+                return Some(Window::ProfileCreator(settings.profiles.profiles[self.selected_index].id.to_owned()))
+            }
             Key::Down => {
                 if self.selected_index + 1 != self.profiles_len {
                     self.selected_index += 1;

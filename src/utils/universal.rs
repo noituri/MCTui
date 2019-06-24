@@ -53,6 +53,19 @@ pub fn create_profile(name: String, version: String, asset: String, args: String
     save_settings(&*settings);
 }
 
+pub fn edit_profile(id: String, name: String, version: String) {
+    let mut settings = SETTINGS.lock().unwrap();
+
+    for p in settings.profiles.profiles.iter_mut() {
+        if p.id == id {
+            p.name = name.to_owned();
+            p.version = version.to_owned();
+        }
+    }
+
+    save_settings(&*settings);
+}
+
 pub fn save_settings(settings: &crate::settings::Settings) {
     serde_json::to_writer_pretty(&File::create(format!("{}/mctui.json", DOT_MCTUI)).unwrap(),settings).unwrap();
 }

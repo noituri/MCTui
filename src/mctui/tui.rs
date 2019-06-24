@@ -31,9 +31,9 @@ pub fn start_tui() -> Result<(), failure::Error> {
     loop {
         terminal.draw(|mut f| {
             match app.current_window {
-                Window::Home => app.windows.home.render(&mut f, None),
-                Window::Welcome => app.windows.welcome.render(&mut f, None),
-                Window::ProfileCreator => app.windows.profile_creator.render(&mut f, None),
+                Window::Home(_) => app.windows.home.render(&mut f, None),
+                Window::Welcome(_) => app.windows.welcome.render(&mut f, None),
+                Window::ProfileCreator(_) => app.windows.profile_creator.render(&mut f, None),
             }
         })?;
 
@@ -52,29 +52,55 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
                 return None
             }
 
-            match app.current_window {
-                Window::Welcome => {
+            match &app.current_window {
+                Window::Welcome(_) => {
                     match app.windows.welcome.handle_events(input) {
                         Some(route) => app.current_window = route,
                         None => {}
                     }
 
                 },
-                Window::ProfileCreator => {
+                Window::ProfileCreator(_) => {
                     match app.windows.profile_creator.handle_events(input) {
                         Some(route) => app.current_window = route,
                         None => {}
                     }
 
                 },
-                Window::Home => {
+                Window::Home(_) => {
                     match app.windows.home.handle_events(input) {
                         Some(route) => app.current_window = route,
                         None => {}
                     }
-                    match app.windows.home.profiles_tab.handle_events(input) {
-                        Some(route) => app.current_window = route,
-                        None => {}
+
+                    if app.windows.home.tab_index == 1 {
+                        match app.windows.home.profiles_tab.handle_events(input) {
+                            Some(route) => {
+                                match &route {
+                                    Window::ProfileCreator(id) => {
+                                        app.windows.profile_creator.id = Some(id.to_owned());
+                                        let mut settings = SETTINGS.lock().unwrap();
+                                        match settings.profiles.get_profile(&id) {
+                                            Some(profile) => {
+                                                app.windows.profile_creator.input = profile.name.to_owned();
+
+                                                for (i, v) in app.windows.profile_creator.versions.iter().enumerate() {
+                                                    if v.id == profile.version {
+                                                        app.windows.profile_creator.selected_version = i;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            None => {}
+                                        }
+                                    }
+                                    _ => {}
+                                }
+
+                                app.current_window = route
+                            },
+                            None => {}
+                        }
                     }
                 },
             }

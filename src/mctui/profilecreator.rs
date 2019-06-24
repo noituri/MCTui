@@ -1,6 +1,7 @@
 use super::app::WinWidget;
 use crate::structs::versions;
 use crate::constants::VERSIONS;
+use crate::SETTINGS;
 use crate::structs::libraries::Libraries;
 use tui::Frame;
 use tui::layout::{Rect, Layout, Direction, Constraint};
@@ -11,7 +12,8 @@ use termion::event::Key;
 use super::app::Window;
 
 pub struct ProfileCreatorWindow {
-    pub input: (String, String),
+    pub input: String,
+    pub id: Option<String>,
     pub selected_version: usize,
     pub versions: Vec<versions::Version>,
 }
@@ -21,7 +23,8 @@ impl WinWidget for ProfileCreatorWindow {
         let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
 
         ProfileCreatorWindow {
-            input: (String::new(), "-Xmx8G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M".to_string()),
+            input: String::new(),
+            id: None,
             selected_version: 0,
             versions: versions_resp.versions,
         }
@@ -33,14 +36,26 @@ impl WinWidget for ProfileCreatorWindow {
                 let selected_version = &self.versions[self.selected_version];
                 //TODO check connection
                 let assets_resp: Libraries = reqwest::get(selected_version.url.as_str()).unwrap().json().unwrap();
-                crate::universal::create_profile(
-                    self.input.0.to_owned(),
-                    selected_version.id.to_owned(),
-                    assets_resp.asset_index.id,
-                    self.input.1.to_owned(),
-                );
 
-                return Some(Window::Home);
+                match self.id.to_owned() {
+                    Some(id) => {
+                        crate::universal::edit_profile(
+                          id,
+                            self.input.to_owned(),
+                          selected_version.id.to_owned(),
+                        );
+                    },
+                    None => {
+                        crate::universal::create_profile(
+                            self.input.to_owned(),
+                            selected_version.id.to_owned(),
+                            assets_resp.asset_index.id,
+                            "-Xmx1G -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:-UseAdaptiveSizePolicy -Xmn128M".to_string(),
+                        );
+                    }
+                }
+
+                return Some(Window::Home(String::new()));
             }
             Key::Down => {
                 if self.selected_version + 1 != self.versions.len() {
@@ -57,10 +72,10 @@ impl WinWidget for ProfileCreatorWindow {
                 }
             }
             Key::Backspace => {
-                self.input.0.pop();
+                self.input.pop();
             }
             Key::Char(ch) => {
-                self.input.0.push(ch);
+                self.input.push(ch);
             }
             _ => {}
         }
@@ -88,7 +103,7 @@ impl WinWidget for ProfileCreatorWindow {
 
         Block::default().borders(Borders::ALL).title("Profile creator").render(backend, layout[1]);
 
-        Paragraph::new([Text::raw(self.input.0.to_owned())].iter())
+        Paragraph::new([Text::raw(self.input.to_owned())].iter())
             .block(Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::Cyan).modifier(Modifier::BOLD))

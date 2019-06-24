@@ -14,7 +14,7 @@ use tui::style::{Style, Color};
 pub struct HomeWindow<'a> {
     pub sender: Option<Sender<String>>,
     pub receiver: Option<Receiver<String>>,
-    tab_index: usize,
+    pub tab_index: usize,
     logger: LoggerFrame,
     bottom_nav: BottomNav<'a>,
     pub profiles_tab: ProfilesTab
@@ -50,7 +50,6 @@ impl<'a> WinWidget for HomeWindow<'a> {
                             None => {}
                         }
                     }
-                    1 => {},
                     _ => {}
                 }
             }

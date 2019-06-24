@@ -49,5 +49,5 @@ impl<'a> App<'a> {
 pub trait WinWidget {
     fn new() -> Self;
     fn handle_events(&mut self, key: Key) -> Option<Window>;
-    fn render<B>(&mut self, _: &mut Frame<B>, _: Option<Rect>) where B: Backend;
+    fn render<B>(&mut self, backend: &mut Frame<B>, _: Option<Rect>) where B: Backend;
 }

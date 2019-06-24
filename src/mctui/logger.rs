@@ -3,7 +3,8 @@ use tui::Frame;
 use tui::layout::Rect;
 use tui::backend::Backend;
 use crossbeam_channel::Receiver;
-use super::app::WinWidget;
+use super::app::{WinWidget, Window};
+use termion::event::Key;
 
 pub struct LoggerFrame {
     pub receiver: Option<Receiver<String>>,
@@ -16,6 +17,10 @@ impl WinWidget for LoggerFrame {
             receiver: None,
             output: Vec::new()
         }
+    }
+
+    fn handle_events(&mut self, key: Key) -> Option<Window> {
+        unimplemented!()
     }
 
     fn render<B>(&mut self, backend: &mut Frame<B>, rect: Option<Rect>) where B: Backend {

@@ -72,6 +72,10 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
                         Some(route) => app.current_window = route,
                         None => {}
                     }
+                    match app.windows.home.profiles_tab.handle_events(input) {
+                        Some(route) => app.current_window = route,
+                        None => {}
+                    }
                 },
             }
         }

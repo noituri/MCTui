@@ -16,10 +16,6 @@ pub struct ProfileCreatorWindow {
     pub versions: Vec<versions::Version>,
 }
 
-//pub struct Selected {
-//
-//}
-
 impl WinWidget for ProfileCreatorWindow {
     fn new() -> ProfileCreatorWindow {
         let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
@@ -98,13 +94,6 @@ impl WinWidget for ProfileCreatorWindow {
                 .border_style(Style::default().fg(Color::Cyan).modifier(Modifier::BOLD))
                 .title("Name"))
             .render(backend, chunks[0]);
-
-//        Paragraph::new([Text::raw(self.input.1.to_owned())].iter())
-//            .block(Block::default()
-//                .borders(Borders::ALL)
-//                .border_style(Style::default().fg(Color::Cyan).modifier(Modifier::BOLD))
-//                .title("Args"))
-//            .render(backend, chunks[0]);
 
         let versions: Vec<String> = self.versions.iter().map(|v| v.id.to_owned()).collect();
 

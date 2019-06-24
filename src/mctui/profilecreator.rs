@@ -55,6 +55,10 @@ impl WinWidget for ProfileCreatorWindow {
                     }
                 }
 
+                self.input = String::new();
+                self.selected_version = 0;
+                self.id = None;
+
                 return Some(Window::Home(String::new()));
             }
             Key::Down => {

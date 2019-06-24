@@ -78,20 +78,22 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
                             Some(route) => {
                                 match &route {
                                     Window::ProfileCreator(id) => {
-                                        app.windows.profile_creator.id = Some(id.to_owned());
-                                        let mut settings = SETTINGS.lock().unwrap();
-                                        match settings.profiles.get_profile(&id) {
-                                            Some(profile) => {
-                                                app.windows.profile_creator.input = profile.name.to_owned();
+                                        if id != "" {
+                                            app.windows.profile_creator.id = Some(id.to_owned());
+                                            let mut settings = SETTINGS.lock().unwrap();
+                                            match settings.profiles.get_profile(&id) {
+                                                Some(profile) => {
+                                                    app.windows.profile_creator.input = profile.name.to_owned();
 
-                                                for (i, v) in app.windows.profile_creator.versions.iter().enumerate() {
-                                                    if v.id == profile.version {
-                                                        app.windows.profile_creator.selected_version = i;
-                                                        break;
+                                                    for (i, v) in app.windows.profile_creator.versions.iter().enumerate() {
+                                                        if v.id == profile.version {
+                                                            app.windows.profile_creator.selected_version = i;
+                                                            break;
+                                                        }
                                                     }
                                                 }
+                                                None => {}
                                             }
-                                            None => {}
                                         }
                                     }
                                     _ => {}

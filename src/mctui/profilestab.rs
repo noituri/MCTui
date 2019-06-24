@@ -26,6 +26,9 @@ impl WinWidget for ProfilesTab {
                 let settings = SETTINGS.lock().unwrap();
                 return Some(Window::ProfileCreator(settings.profiles.profiles[self.selected_index].id.to_owned()))
             }
+            Key::Char('n') => {
+                return Some(Window::ProfileCreator(String::new()))
+            }
             Key::Down => {
                 if self.selected_index + 1 != self.profiles_len {
                     self.selected_index += 1;

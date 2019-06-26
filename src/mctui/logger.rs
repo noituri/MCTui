@@ -19,7 +19,7 @@ impl WinWidget for LoggerFrame {
         }
     }
 
-    fn handle_events(&mut self, key: Key) -> Option<Window> {
+    fn handle_events(&mut self, _key: Key) -> Option<Window> {
         unimplemented!()
     }
 

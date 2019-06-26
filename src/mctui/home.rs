@@ -7,7 +7,6 @@ use super::profilestab::ProfilesTab;
 use super::app::{WinWidget, Window};
 use crossbeam_channel::{Receiver, Sender};
 use termion::event::Key;
-use std::thread;
 use tui::widgets::{Tabs, Block, Widget, Borders};
 use tui::style::{Style, Color};
 

@@ -5,7 +5,7 @@ use std::fs::File;
 use std::process::Command;
 
 pub fn start_checker() {
-    let mut settings = SETTINGS.lock().unwrap();
+    let settings = SETTINGS.lock().unwrap();
 
     let output = Command::new("ping").arg("-c").arg("1").arg("8.8.8.8").output().unwrap();
 

@@ -1,7 +1,6 @@
 use super::app::WinWidget;
 use crate::structs::versions;
 use crate::constants::VERSIONS;
-use crate::SETTINGS;
 use crate::structs::libraries::Libraries;
 use tui::Frame;
 use tui::layout::{Rect, Layout, Direction, Constraint};

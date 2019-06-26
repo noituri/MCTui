@@ -1,7 +1,4 @@
 use crate::mctui::app::{App, Window, WinWidget};
-use crate::structs::libraries::Libraries;
-use crate::SETTINGS;
-use crate::universal::save_settings;
 use termion::event::Key;
 use termion::input::MouseTerminal;
 use termion::raw::IntoRawMode;
@@ -9,9 +6,7 @@ use termion::screen::AlternateScreen;
 use tui::backend::TermionBackend;
 use crate::mctui::events::{Events, Event};
 use tui::Terminal;
-use crate::mctui::welcome::Selected;
-use std::thread;
-use crossbeam_channel::{unbounded, Sender};
+use crossbeam_channel::unbounded;
 
 pub fn start_tui() -> Result<(), failure::Error> {
     let stdout = std::io::stdout().into_raw_mode()?;
@@ -80,7 +75,6 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
                                     Window::ProfileCreator(id) => {
                                         if id != "" {
                                             app.windows.profile_creator.id = Some(id.to_owned());
-                                            let mut settings = SETTINGS.lock().unwrap();
                                             match crate::universal::get_profile(&id) {
                                                 Some(profile) => {
                                                     app.windows.profile_creator.input = profile.name.to_owned();

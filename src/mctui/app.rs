@@ -1,5 +1,3 @@
-use crate::structs::versions;
-use crate::constants::VERSIONS;
 use crate::SETTINGS;
 use super::welcome::WelcomeWindow;
 use super::home::HomeWindow;

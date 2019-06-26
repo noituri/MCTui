@@ -1,5 +1,4 @@
 use reqwest;
-use std::fs;
 use std::fs::{create_dir_all, File};
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -7,9 +6,8 @@ use crate::structs::*;
 use crate::constants::*;
 use crate::utils::files;
 use std::io::{BufReader, BufRead};
-use std::io::{Write, Read};
+use std::io::Read;
 use crossbeam_channel::Sender;
-//use futures::executor::block_on;
 
 pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
     let settings = crate::SETTINGS.lock().unwrap();
@@ -28,10 +26,10 @@ pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
 
        for v in versions_resp.versions {
            if v.id == profile.version {
-               sender.send("Verifying files".to_string());
+               sender.send("Verifying files".to_string()).unwrap();
                let to_download = files::verify_files(reqwest::get(v.url.as_str()).unwrap().json().unwrap(), &profile.name);
 
-               sender.send("Downloading files".to_string());
+               sender.send("Downloading files".to_string()).unwrap();
                for (k, v) in &to_download {
                    files::download_file(k.to_string(), v);
                }
@@ -124,7 +122,7 @@ pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
 }
 
 pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, args: &str, sender: Sender<String>) {
-    sender.send("Launching Minecraft Instance...".to_string());
+    sender.send("Launching Minecraft Instance...".to_string()).unwrap();
 
     let dot = std::env::var("DOT_MCTUI").unwrap();
 

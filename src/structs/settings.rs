@@ -50,16 +50,4 @@ impl Settings {
 
         Ok(serde_json::from_str(&contents).unwrap())
     }
-
-    pub fn set_profile(&mut self, id: String) -> Result<(),()> {
-        for p in &self.profiles.profiles {
-            if p.id == id {
-                self.profiles.selected = id;
-                crate::universal::save_settings(self);
-                return Ok(());
-            }
-        }
-
-        Err(())
-    }
 }

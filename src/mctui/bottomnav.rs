@@ -6,7 +6,6 @@ use tui::style::{Style, Color, Modifier};
 use super::app::{WinWidget, Window};
 use crate::SETTINGS;
 use termion::event::Key;
-use core::borrow::Borrow;
 use std::thread;
 use crossbeam_channel::Sender;
 

@@ -80,7 +80,7 @@ impl WinWidget for ProfilesTab {
 
         let header = ["Name", "Version"];
 
-        let mut settings = SETTINGS.lock().unwrap();
+        let settings = SETTINGS.lock().unwrap();
         self.profiles_len = settings.profiles.profiles.len();
 
         let rows = settings.profiles.profiles.iter().enumerate().map(|(i, item)| {

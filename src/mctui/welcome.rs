@@ -4,12 +4,10 @@ use tui::Frame;
 use tui::widgets::{Paragraph, Borders, Text, Block, Widget};
 use tui::style::{Style, Color, Modifier};
 use super::app::WinWidget;
-use crate::mctui::events::{Events, Event};
 use termion::event::Key;
-use super::app::{App, Window};
+use super::app::Window;
 use crate::SETTINGS;
 use crate::universal::save_settings;
-use std::sync::{Arc, Mutex, MutexGuard};
 
 pub enum Selected {
     Username,

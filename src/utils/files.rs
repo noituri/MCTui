@@ -8,13 +8,9 @@ use sha1::Sha1;
 use sha1::Digest;
 use crate::constants::*;
 use crate::structs::*;
-use std::error::Error;
 use std::io::Read;
 use std::collections::HashMap;
-//use futures::executor::block_on;
 use std::sync::Mutex;
-use crossbeam_channel::Sender;
-
 
 pub fn download_file(url: String, path: &str) {
     create_dir_all(path).unwrap();

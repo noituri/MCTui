@@ -15,9 +15,9 @@ pub enum Window {
     ProfileCreator(String)
 }
 
-pub struct App<'a> {
+pub struct App {
     pub current_window: Window,
-    pub windows: Windows<WelcomeWindow, HomeWindow<'a>, ProfileCreatorWindow>,
+    pub windows: Windows<WelcomeWindow, HomeWindow, ProfileCreatorWindow>,
 }
 
 pub struct Windows<W, H, P> where W: WinWidget, H: WinWidget, P: WinWidget {
@@ -26,8 +26,8 @@ pub struct Windows<W, H, P> where W: WinWidget, H: WinWidget, P: WinWidget {
     pub profile_creator: P
 }
 
-impl<'a> App<'a> {
-    pub fn new() -> App<'a> {
+impl App {
+    pub fn new() -> App {
         let settings = SETTINGS.lock().unwrap();
         let mut current_window = Window::Welcome(String::new());
 

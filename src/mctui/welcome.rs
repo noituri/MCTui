@@ -73,7 +73,7 @@ impl WinWidget for WelcomeWindow {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .margin(2)
-            .constraints([Constraint::Length(3), Constraint::Max(12), Constraint::Max(1)].as_ref())
+            .constraints([Constraint::Length(3), Constraint::Max(14), Constraint::Max(1)].as_ref())
             .split(
                 Layout::default().direction(Direction::Horizontal)
                     .constraints([
@@ -85,7 +85,7 @@ impl WinWidget for WelcomeWindow {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Ratio(1, 3), Constraint::Ratio(1, 3), Constraint::Ratio(1, 5)].as_ref())
+            .constraints([Constraint::Ratio(1, 4), Constraint::Ratio(1, 4), Constraint::Ratio(1, 4)].as_ref())
             .split(layout[1]);
 
         Block::default().borders(Borders::ALL).title("Sign In").render(backend, layout[1]);
@@ -116,7 +116,7 @@ impl WinWidget for WelcomeWindow {
             Text::raw(" Press "),
             Text::styled("enter", style),
             Text::raw(" to submit"),
-            Text::raw("\n Leave password empty if you want to use offline mode")
+            Text::raw("\n Leave password empty if you want to use offline mode (online mode is not working right now)")
         ]
             .iter())
             .wrap(true)

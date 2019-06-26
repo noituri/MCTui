@@ -11,17 +11,17 @@ use std::thread;
 use tui::widgets::{Tabs, Block, Widget, Borders};
 use tui::style::{Style, Color};
 
-pub struct HomeWindow<'a> {
+pub struct HomeWindow {
     pub sender: Option<Sender<String>>,
     pub receiver: Option<Receiver<String>>,
     pub tab_index: usize,
+    pub bottom_nav: BottomNav,
+    pub profiles_tab: ProfilesTab,
     logger: LoggerFrame,
-    bottom_nav: BottomNav<'a>,
-    pub profiles_tab: ProfilesTab
 }
 
-impl<'a> WinWidget for HomeWindow<'a> {
-    fn new() -> HomeWindow<'a> {
+impl WinWidget for HomeWindow {
+    fn new() -> HomeWindow {
         HomeWindow {
             sender: None,
             receiver: None,
@@ -34,25 +34,6 @@ impl<'a> WinWidget for HomeWindow<'a> {
 
     fn handle_events(&mut self, key: Key) -> Option<Window> {
         match key {
-            Key::Char('\n') => {
-                match self.tab_index {
-                    0 => {
-                        let settings = crate::SETTINGS.lock().unwrap();
-                        let selected = settings.profiles.selected.to_owned();
-                        std::mem::drop(settings);
-
-                        match self.sender.to_owned() {
-                            Some(sender) => {
-                                thread::spawn(move || {
-                                    crate::utils::launch::prepare_game(&selected, sender);
-                                });
-                            },
-                            None => {}
-                        }
-                    }
-                    _ => {}
-                }
-            }
             Key::Char('\t') => {
                 self.tab_index = match self.tab_index {
                     0 => 1,
@@ -69,7 +50,7 @@ impl<'a> WinWidget for HomeWindow<'a> {
     fn render<B>(&mut self, backend: &mut Frame<B>, _rect: Option<Rect>) where B: Backend {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(8), Constraint::Percentage(72), Constraint::Percentage(20)].as_ref())
+            .constraints([Constraint::Length(3), Constraint::Percentage(72), Constraint::Percentage(20)].as_ref())
             .split(backend.size());
 
         Tabs::default()
@@ -84,6 +65,8 @@ impl<'a> WinWidget for HomeWindow<'a> {
             0 => {
                 self.logger.receiver = self.receiver.to_owned();
                 self.logger.render(backend, Some(chunks[1]));
+
+                self.bottom_nav.sender = self.sender.to_owned();
                 self.bottom_nav.render(backend, Some(chunks[2]));
             }
             1 => {

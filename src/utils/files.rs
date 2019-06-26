@@ -72,10 +72,13 @@ fn verify_file_exists<'a>(file_path: &'a str, hash: &'a str, to_download: &'a mu
 
 //TODO rewrite this (code duplication)
 pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<String, String> {
-    serde_json::to_writer_pretty(&File::create(format!("{}/profiles/{}/version.json", DOT_MCTUI, profile)).unwrap(),&libs_resp).unwrap();
+    let dot = std::env::var("DOT_MCTUI").unwrap();
+
+    create_dir_all(format!("{}/profiles/{}", dot.to_owned(), profile)).unwrap();
+    serde_json::to_writer_pretty(&File::create(format!("{}/profiles/{}/version.json", dot.to_owned(), profile)).unwrap(),&libs_resp).unwrap();
     let mut to_download: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
     let assets_resp: assets::Assets = reqwest::get(libs_resp.asset_index.url.as_str()).unwrap().json().unwrap();
-    let a_indx_path = format!("{}/assets/indexes", DOT_MCTUI);
+    let a_indx_path = format!("{}/assets/indexes", dot.to_owned());
 
     verify_file_exists(
         format!("{}/{}", a_indx_path, libs_resp.asset_index.id).as_str(),
@@ -85,7 +88,7 @@ pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<S
     );
 
     for (_, asset) in &assets_resp.objects {
-        let asset_path = format!("{}/assets/objects/{}", DOT_MCTUI, &asset.hash[0..2]);
+        let asset_path = format!("{}/assets/objects/{}", dot.to_owned(), &asset.hash[0..2]);
 
         verify_file_exists(
             format!("{}/{}", asset_path, &asset.hash).as_str(),
@@ -95,7 +98,7 @@ pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<S
         );
     }
 
-    let client_path = format!("{}/profiles/{}", DOT_MCTUI, profile);
+    let client_path = format!("{}/profiles/{}", dot.to_owned(), profile);
     let client = libs_resp.downloads.client.unwrap();
     verify_file_exists(
         format!("{}/client.jar", client_path).as_str(),
@@ -109,7 +112,7 @@ pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<S
             Some(artifact) => {
                 let url_parts: Vec<&str> = artifact.url.split('/').collect();
 
-                let artifact_path = format!("{}/libs/{}", DOT_MCTUI, artifact.path.to_owned().unwrap());
+                let artifact_path = format!("{}/libs/{}", dot.to_owned(), artifact.path.to_owned().unwrap());
                 verify_file_exists(
                     format!("{}/{}", artifact_path, url_parts.last().unwrap()).as_str(),
                     artifact.sha1.as_str(),
@@ -127,7 +130,7 @@ pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<S
                     Some(native) => {
                         let url_parts: Vec<&str> = native.url.split('/').collect();
 
-                        let class_path = format!("{}/libs/{}", DOT_MCTUI, native.path.to_owned().unwrap());
+                        let class_path = format!("{}/libs/{}", dot.to_owned(), native.path.to_owned().unwrap());
                         verify_file_exists(
                             format!("{}/{}", class_path, url_parts.last().unwrap()).as_str(),
                             native.sha1.as_str(),
@@ -143,7 +146,7 @@ pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<S
                     Some(native) => {
                         let url_parts: Vec<&str> = native.url.split('/').collect();
 
-                        let class_path = format!("{}/libs/{}", DOT_MCTUI, native.path.to_owned().unwrap());
+                        let class_path = format!("{}/libs/{}", dot.to_owned(), native.path.to_owned().unwrap());
                         verify_file_exists(
                             format!("{}/{}", class_path, url_parts.last().unwrap()).as_str(),
                             native.sha1.as_str(),
@@ -159,7 +162,7 @@ pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<S
                     Some(native) => {
                         let url_parts: Vec<&str> = native.url.split('/').collect();
 
-                        let class_path = format!("{}/libs/{}", DOT_MCTUI, native.path.to_owned().unwrap());
+                        let class_path = format!("{}/libs/{}", dot.to_owned(), native.path.to_owned().unwrap());
                         verify_file_exists(
                             format!("{}/{}", class_path, url_parts.last().unwrap()).as_str(),
                             native.sha1.as_str(),

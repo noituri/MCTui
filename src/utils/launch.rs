@@ -12,17 +12,18 @@ use crossbeam_channel::Sender;
 //use futures::executor::block_on;
 
 pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
-
     let settings = crate::SETTINGS.lock().unwrap();
-    let profile = settings.profiles.get_profile(profile_id);
+    let username = settings.auth.username.to_owned();
+    std::mem::drop(settings);
+
+    let profile = crate::universal::get_profile(profile_id);
     if profile.is_none() {
         return;
     }
 
     let profile = profile.unwrap();
 
-
-   if *crate::CONNECTION.lock().unwrap() {
+    if *crate::CONNECTION.lock().unwrap() {
        let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
 
        for v in versions_resp.versions {
@@ -42,14 +43,14 @@ pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
    }
 
     gen_run_cmd(
-        format!("{}/profiles/{}", DOT_MCTUI, profile.name).as_str(),
-        "steam-run /home/noituri/Development/jdk/bin/java",
+        format!("{}/profiles/{}", std::env::var("DOT_MCTUI").unwrap(), profile.name).as_str(),
+        "java",
         "/home/noituri/Development/lwjgl-2.9.3/native/linux/",
-        &settings.auth.username,
+        &username,
         &profile.version,
         &profile.asset,
         &profile.args,
-        sender
+        sender.clone()
     );
 }
 
@@ -125,8 +126,10 @@ pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
 pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, args: &str, sender: Sender<String>) {
     sender.send("Launching Minecraft Instance...".to_string());
 
-    let libs = gen_libs_path(format!("{}/libs", DOT_MCTUI).as_str(), profile).unwrap();
-    let assets = format!("{}/assets", DOT_MCTUI);
+    let dot = std::env::var("DOT_MCTUI").unwrap();
+
+    let libs = gen_libs_path(format!("{}/libs", dot.to_owned()).as_str(), profile).unwrap();
+    let assets = format!("{}/assets", dot);
     let game_dir = format!("{}/game", profile);
 
     create_dir_all(game_dir.to_owned()).unwrap();

@@ -81,7 +81,7 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
                                         if id != "" {
                                             app.windows.profile_creator.id = Some(id.to_owned());
                                             let mut settings = SETTINGS.lock().unwrap();
-                                            match settings.profiles.get_profile(&id) {
+                                            match crate::universal::get_profile(&id) {
                                                 Some(profile) => {
                                                     app.windows.profile_creator.input = profile.name.to_owned();
 
@@ -101,6 +101,11 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
 
                                 app.current_window = route
                             },
+                            None => {}
+                        }
+                    } else {
+                        match app.windows.home.bottom_nav.handle_events(input) {
+                            Some(route) => app.current_window = route,
                             None => {}
                         }
                     }

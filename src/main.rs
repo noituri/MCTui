@@ -1,12 +1,11 @@
+mod constants;
 mod utils;
 mod structs;
-mod constants;
 mod mctui;
 
 use std::path::Path;
 use utils::*;
 use structs::settings;
-use constants::DOT_MCTUI;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 use std::fs::create_dir_all;
@@ -18,8 +17,14 @@ lazy_static! {
 }
 
 fn main() {
-    create_dir_all(DOT_MCTUI).unwrap();
-    std::env::set_current_dir(Path::new(DOT_MCTUI)).unwrap();
+    let mut dot = format!("{}/.mctui", std::env::var("HOME").unwrap());
+    match std::env::var("DOT_MCTUI") {
+        Ok(val) => dot = val,
+        Err(_) => std::env::set_var("DOT_MCTUI", dot.to_owned())
+    }
+
+    create_dir_all(dot.to_owned()).unwrap();
+    std::env::set_current_dir(Path::new(&dot)).unwrap();
     universal::start_checker();
     start_tui().expect("Error occurred");
 }

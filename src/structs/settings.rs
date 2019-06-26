@@ -1,4 +1,3 @@
-use crate::constants::DOT_MCTUI;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::io::{Write, Read};
@@ -36,7 +35,7 @@ pub struct Profile {
 
 impl Settings {
     pub fn new() -> Result<Self, Box<dyn Error>> {
-        let settings_path = format!("{}/mctui.json", DOT_MCTUI);
+        let settings_path = format!("{}/mctui.json", std::env::var("DOT_MCTUI").unwrap());
 
         if !Path::new(&settings_path).exists() {
             let file_bytes = include_bytes!("../../assets/defaultconfig.json");
@@ -62,17 +61,5 @@ impl Settings {
         }
 
         Err(())
-    }
-}
-
-impl Profiles {
-    pub fn get_profile(&self, id: &str) -> Option<&Profile> {
-        for p in &self.profiles {
-            if p.id == id {
-                return Some(p);
-            }
-        }
-
-        None
     }
 }

@@ -1,6 +1,5 @@
 use super::app::{WinWidget, Window};
 use crate::SETTINGS;
-use termion::event::Key;
 use tui::Frame;
 use tui::layout::{Rect, Layout, Direction, Constraint};
 use tui::backend::Backend;

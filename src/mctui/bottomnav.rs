@@ -5,7 +5,6 @@ use tui::widgets::{Borders, Block, Widget, SelectableList};
 use tui::style::{Style, Color, Modifier};
 use super::app::{WinWidget, Window};
 use crate::SETTINGS;
-use termion::event::Key;
 use std::thread;
 use crossbeam_channel::Sender;
 

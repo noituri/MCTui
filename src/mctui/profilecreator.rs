@@ -7,7 +7,6 @@ use tui::layout::{Rect, Layout, Direction, Constraint};
 use tui::backend::Backend;
 use tui::widgets::{Paragraph, Text, Block, Widget, Borders, SelectableList};
 use tui::style::{Style, Color, Modifier};
-use termion::event::Key;
 use super::app::Window;
 
 pub struct ProfileCreatorWindow {

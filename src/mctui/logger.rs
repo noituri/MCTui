@@ -1,10 +1,9 @@
-use tui::widgets::{Block, Borders, Text, Widget, List};
+use tui::widgets::{Block, Borders, Widget, List};
 use tui::Frame;
 use tui::layout::Rect;
 use tui::backend::Backend;
 use crossbeam_channel::Receiver;
 use super::app::{WinWidget, Window};
-use termion::event::Key;
 
 pub struct LoggerFrame {
     pub receiver: Option<Receiver<String>>,

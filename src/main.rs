@@ -4,6 +4,7 @@ mod structs;
 mod mctui;
 
 use std::path::Path;
+use platform_dirs::AppDirs;
 use utils::*;
 use structs::settings;
 use lazy_static::lazy_static;
@@ -17,7 +18,10 @@ lazy_static! {
 }
 
 fn main() {
-    let mut dot = format!("{}/.mctui", std::env::var("HOME").unwrap());
+    let mut dot = {
+        let app_dirs = AppDirs::new(Some("mctui"), false).unwrap();
+        app_dirs.data_dir.into_os_string().into_string().expect("hmmm, ah yes paths")
+    };
     match std::env::var("DOT_MCTUI") {
         Ok(val) => dot = val,
         Err(_) => std::env::set_var("DOT_MCTUI", dot.to_owned())

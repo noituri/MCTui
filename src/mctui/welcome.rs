@@ -1,7 +1,8 @@
+use crossterm::event::KeyCode;
 use tui::{backend::Backend, widgets::Wrap};
 use tui::layout::{Layout, Direction, Constraint, Rect};
 use tui::Frame;
-use tui::widgets::{Paragraph, Borders, Block, Widget};
+use tui::widgets::{Paragraph, Borders, Block};
 use tui::text::{Spans, Span};
 use tui::style::{Style, Color, Modifier};
 use super::app::TuiWidget;
@@ -29,9 +30,9 @@ impl WelcomeWindow {
 }
 
 impl TuiWidget for WelcomeWindow {
-    fn handle_events(&mut self, key: Key) -> Option<WindowType> {
+    fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         match key {
-            Key::Char('\n') => {
+            KeyCode::Enter => {
                 let mut settings = SETTINGS.lock().unwrap();
                 settings.auth.username = self.input.0.to_owned();
                 save_settings(&*settings);
@@ -42,13 +43,13 @@ impl TuiWidget for WelcomeWindow {
                     return Some(WindowType::Home);
                 }
             }
-            Key::Down | Key::Up | Key::Char('\t') => {
+            KeyCode::Down | KeyCode::Up | KeyCode::Tab => {
                 match self.selected {
                     Selected::Username => self.selected = Selected::Password,
                     Selected::Password => self.selected = Selected::Username
                 }
             }
-            Key::Backspace => {
+            KeyCode::Backspace => {
                 match self.selected {
                     Selected::Username => {
                         self.input.0.pop();
@@ -58,7 +59,7 @@ impl TuiWidget for WelcomeWindow {
                     }
                 };
             }
-            Key::Char(ch) => {
+            KeyCode::Char(ch) => {
                 match self.selected {
                     Selected::Username => self.input.0.push(ch),
                     Selected::Password => self.input.1.push(ch)
@@ -119,10 +120,8 @@ impl TuiWidget for WelcomeWindow {
     
         let style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
         let paragraph = Paragraph::new(vec![
-            Spans::from(" Press "),
-            Spans::from(Span::styled("enter", style)),
-            Spans::from(" to submit"),
-            Spans::from("\n Leave password empty if you want to use offline mode (online mode is not working right now)")
+            Spans::from(vec![" Press ".into(), Span::styled("enter", style), " to submit".into()]),
+            Spans::from("Leave password empty if you want to use offline mode (online mode is not working right now)")
         ])
             .wrap(Wrap { trim: true })
             .block(Block::default().borders(Borders::TOP));

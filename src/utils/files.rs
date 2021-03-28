@@ -1,6 +1,6 @@
 use reqwest;
 use reqwest::StatusCode;
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 use std::fs::create_dir_all;
 use std::io;
 use std::path::Path;

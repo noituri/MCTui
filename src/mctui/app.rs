@@ -2,6 +2,7 @@ use std::{collections::HashMap, io::Stdout, slice::Windows};
 
 use crate::SETTINGS;
 use super::welcome::WelcomeWindow;
+use crossterm::event::KeyCode;
 // use super::home::HomeWindow;
 // use super::profilecreator::ProfileCreatorWindow;
 use tui::{Frame, widgets::Widget};
@@ -50,6 +51,6 @@ impl App {
 }
 
 pub trait TuiWidget {
-    fn handle_events(&mut self, key: Key) -> Option<WindowType>;
+    fn handle_events(&mut self, key: KeyCode) -> Option<WindowType>;
     fn render<B>(&mut self, frame: &mut Frame<B>, _: Option<Rect>) where B: Backend;
 }

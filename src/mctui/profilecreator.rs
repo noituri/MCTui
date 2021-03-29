@@ -1,23 +1,24 @@
-use super::app::WinWidget;
 use crate::structs::versions;
 use crate::constants::VERSIONS;
 use crate::structs::libraries::Libraries;
-use tui::Frame;
+use crossterm::event::KeyCode;
+use tui::{Frame, text::{Span, Spans}, widgets::{List, ListItem, ListState, Wrap}};
 use tui::layout::{Rect, Layout, Direction, Constraint};
 use tui::backend::Backend;
-use tui::widgets::{Paragraph, Text, Block, Widget, Borders, SelectableList};
+use tui::widgets::{Paragraph, Block, Widget, Borders};
 use tui::style::{Style, Color, Modifier};
-use super::app::Window;
+use super::app::{TuiWidget, WindowType};
 
 pub struct ProfileCreatorWindow {
     pub input: String,
     pub id: Option<String>,
     pub selected_version: usize,
     pub versions: Vec<versions::Version>,
+    list_state: ListState
 }
 
-impl WinWidget for ProfileCreatorWindow {
-    fn new() -> ProfileCreatorWindow {
+impl ProfileCreatorWindow {
+    pub fn new() -> ProfileCreatorWindow {
         let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
 
         ProfileCreatorWindow {
@@ -25,12 +26,15 @@ impl WinWidget for ProfileCreatorWindow {
             id: None,
             selected_version: 0,
             versions: versions_resp.versions,
+            list_state: ListState::default()
         }
     }
+}
 
-    fn handle_events(&mut self, key: Key) -> Option<Window> {
+impl TuiWidget for ProfileCreatorWindow {
+    fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         match key {
-            Key::Char('\n') => {
+            KeyCode::Enter => {
                 let selected_version = &self.versions[self.selected_version];
                 //TODO check connection
                 let assets_resp: Libraries = reqwest::get(selected_version.url.as_str()).unwrap().json().unwrap();
@@ -57,26 +61,26 @@ impl WinWidget for ProfileCreatorWindow {
                 self.selected_version = 0;
                 self.id = None;
 
-                return Some(Window::Home(String::new()));
+                return Some(WindowType::Home);
             }
-            Key::Down => {
+            KeyCode::Down => {
                 if self.selected_version + 1 != self.versions.len() {
                     self.selected_version += 1;
                 } else {
                     self.selected_version = 0;
                 }
             }
-            Key::Up => {
+            KeyCode::Up => {
                 if self.selected_version > 0 {
                     self.selected_version -= 1;
                 } else {
                     self.selected_version = self.versions.len() - 1;
                 }
             }
-            Key::Backspace => {
+            KeyCode::Backspace => {
                 self.input.pop();
             }
-            Key::Char(ch) => {
+            KeyCode::Char(ch) => {
                 self.input.push(ch);
             }
             _ => {}
@@ -84,7 +88,7 @@ impl WinWidget for ProfileCreatorWindow {
         None
     }
 
-    fn render<B>(&mut self, backend: &mut Frame<B>, _: Option<Rect>) where B: Backend {
+    fn render<B>(&mut self, frame: &mut Frame<B>, _: Option<Rect>) where B: Backend {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .margin(2)
@@ -95,7 +99,7 @@ impl WinWidget for ProfileCreatorWindow {
                         Constraint::Percentage(30),
                         Constraint::Percentage(40),
                         Constraint::Percentage(30)
-                    ].as_ref()).split(backend.size())[1]);
+                    ].as_ref()).split(frame.size())[1]);
 
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -103,32 +107,39 @@ impl WinWidget for ProfileCreatorWindow {
             .constraints([Constraint::Ratio(1, 4), Constraint::Ratio(1, 2), Constraint::Ratio(1, 4)].as_ref())
             .split(layout[1]);
 
-        Block::default().borders(Borders::ALL).title("Profile creator").render(backend, layout[1]);
+        let block = Block::default().borders(Borders::ALL).title("Profile creator");
+        frame.render_widget(block, layout[1]);
 
-        Paragraph::new([Text::raw(self.input.to_owned())].iter())
+        let paragraph = Paragraph::new(Spans::from(self.input.as_str()))
             .block(Block::default()
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Cyan).modifier(Modifier::BOLD))
-                .title("Name"))
-            .render(backend, chunks[0]);
+                .border_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+                .title("Name"));
 
-        let versions: Vec<String> = self.versions.iter().map(|v| v.id.to_owned()).collect();
+        frame.render_widget(paragraph, chunks[0]);
 
-        SelectableList::default()
+        let versions: Vec<ListItem> = self.versions
+            .iter()
+            .map(|v| ListItem::new(v.id.as_str()))
+            .collect();
+        let list = List::new(versions)
             .block(Block::default().borders(Borders::ALL).title("Options"))
-            .items(&versions)
-            .select(Some(self.selected_version))
-            .highlight_style(Style::default().fg(Color::LightGreen).modifier(Modifier::BOLD))
-            .highlight_symbol(">")
-            .render(backend, chunks[1]);
+            .highlight_style(Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD))
+            .highlight_symbol(">");
+        frame.render_stateful_widget(list, chunks[1], &mut self.list_state);
+        self.list_state.select(Some(self.selected_version));
+        // SelectableList::default()
+        //     .block(Block::default().borders(Borders::ALL).title("Options"))
+        //     .items(&versions)
+        //     .select(Some(self.selected_version))
+        //     .highlight_style(Style::default().fg(Color::LightGreen).modifier(Modifier::BOLD))
+        //     .highlight_symbol(">")
+        //     .render(backend, chunks[1]);
+        let style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+        let paragraph = Paragraph::new(Spans::from(vec![" Press ".into(), Span::styled("enter", style), " to submit".into()]))
+            .wrap(Wrap { trim: true })
+            .block(Block::default().borders(Borders::TOP));
 
-        Paragraph::new([
-            Text::raw(" Press "),
-            Text::styled("enter", Style::default().fg(Color::Cyan).modifier(Modifier::BOLD)),
-            Text::raw(" to submit")
-        ].iter())
-            .wrap(true)
-            .block(Block::default().borders(Borders::TOP))
-            .render(backend, chunks[2]);
+        frame.render_widget(paragraph, chunks[2]);
     }
 }

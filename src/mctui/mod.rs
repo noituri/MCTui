@@ -5,5 +5,5 @@ pub mod events;
 pub mod welcome;
 // pub mod home;
 // pub mod bottomnav;
-// pub mod profilecreator;
+pub mod profilecreator;
 // pub mod profilestab;

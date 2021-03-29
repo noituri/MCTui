@@ -1,7 +1,7 @@
 use std::{collections::HashMap, io::Stdout, slice::Windows};
 
 use crate::SETTINGS;
-use super::welcome::WelcomeWindow;
+use super::{profilecreator::ProfileCreatorWindow, welcome::WelcomeWindow};
 use crossterm::event::KeyCode;
 // use super::home::HomeWindow;
 // use super::profilecreator::ProfileCreatorWindow;
@@ -21,13 +21,14 @@ pub struct App {
 }
 
 pub struct TuiWindows {
-    pub welcome: WelcomeWindow
+    pub welcome: WelcomeWindow,
+    pub profile_creator: ProfileCreatorWindow
 }
 
 impl App {
     pub fn new() -> Self {
         let settings = SETTINGS.lock().unwrap();
-        let mut current_window = WindowType::Welcome;
+        let mut current_window = WindowType::ProfileCreator(String::new());
 
         // if settings.auth.username != "" {
         //     current_window = Window::Home();
@@ -35,7 +36,8 @@ impl App {
         Self {
             current_window, 
             windows: TuiWindows {
-                welcome: WelcomeWindow::new()
+                welcome: WelcomeWindow::new(),
+                profile_creator: ProfileCreatorWindow::new()
             }
         }
     }
@@ -45,6 +47,7 @@ impl App {
     {
         match self.current_window {
             WindowType::Welcome => self.windows.welcome.render(frame, None),
+            WindowType::ProfileCreator(_) => self.windows.profile_creator.render(frame, None),
             _ => unimplemented!()
         }
     }

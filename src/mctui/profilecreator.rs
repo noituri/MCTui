@@ -123,18 +123,12 @@ impl TuiWidget for ProfileCreatorWindow {
             .map(|v| ListItem::new(v.id.as_str()))
             .collect();
         let list = List::new(versions)
-            .block(Block::default().borders(Borders::ALL).title("Options"))
+            .block(Block::default().borders(Borders::ALL).title("Versions"))
             .highlight_style(Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD))
             .highlight_symbol(">");
         frame.render_stateful_widget(list, chunks[1], &mut self.list_state);
         self.list_state.select(Some(self.selected_version));
-        // SelectableList::default()
-        //     .block(Block::default().borders(Borders::ALL).title("Options"))
-        //     .items(&versions)
-        //     .select(Some(self.selected_version))
-        //     .highlight_style(Style::default().fg(Color::LightGreen).modifier(Modifier::BOLD))
-        //     .highlight_symbol(">")
-        //     .render(backend, chunks[1]);
+
         let style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
         let paragraph = Paragraph::new(Spans::from(vec![" Press ".into(), Span::styled("enter", style), " to submit".into()]))
             .wrap(Wrap { trim: true })

@@ -51,6 +51,18 @@ impl App {
             _ => unimplemented!()
         }
     }
+
+    pub fn handle_events(&mut self, key: KeyCode) {
+        let window_route = match self.current_window {
+            WindowType::Welcome => self.windows.welcome.handle_events(key),
+            WindowType::ProfileCreator(_) => self.windows.profile_creator.handle_events(key),
+            _ => unimplemented!()
+        };
+
+        if let Some(route) = window_route {
+            self.current_window = route;
+        }
+    }
 }
 
 pub trait TuiWidget {

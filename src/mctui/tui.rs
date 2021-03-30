@@ -57,20 +57,6 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
             }
 
             match &app.current_window {
-                &WindowType::Welcome => {
-                    match app.windows.welcome.handle_events(input) {
-                        Some(route) => app.current_window = route,
-                        None => {}
-                    }
-
-                },
-                // Window::ProfileCreator(_) => {
-                //     match app.windows.profile_creator.handle_events(input) {
-                //         Some(route) => app.current_window = route,
-                //         None => {}
-                //     }
-
-                // },
                 // Window::Home(_) => {
                 //     match app.windows.home.handle_events(input) {
                 //         Some(route) => app.current_window = route,
@@ -113,7 +99,7 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
                 //         }
                 //     }
                 // },
-                _ => {}
+                _ => app.handle_events(input)
             }
         }
         _ => {}

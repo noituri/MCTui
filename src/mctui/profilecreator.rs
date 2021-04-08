@@ -16,30 +16,31 @@ use tui::{
 pub struct ProfileCreatorWindow {
     pub input: String,
     pub id: Option<String>,
-    pub selected_version: usize,
     pub versions: Vec<versions::Version>,
     list_state: ListState,
 }
 
 impl ProfileCreatorWindow {
-    pub fn new() -> ProfileCreatorWindow {
+    pub fn new() -> Self {
         let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
+        let mut list_state = ListState::default();
+        list_state.select(Some(0));
 
-        ProfileCreatorWindow {
+        Self {
+            list_state,
             input: String::new(),
             id: None,
-            selected_version: 0,
             versions: versions_resp.versions,
-            list_state: ListState::default(),
         }
     }
 }
 
 impl TuiWidget for ProfileCreatorWindow {
     fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
+        let selected_item = self.list_state.selected().unwrap_or_default();
         match key {
             KeyCode::Enter => {
-                let selected_version = &self.versions[self.selected_version];
+                let selected_version = &self.versions[selected_item];
                 //TODO check connection
                 let assets_resp: Libraries = reqwest::get(selected_version.url.as_str())
                     .unwrap()
@@ -65,23 +66,23 @@ impl TuiWidget for ProfileCreatorWindow {
                 }
 
                 self.input = String::new();
-                self.selected_version = 0;
+                self.list_state.select(Some(0));
                 self.id = None;
 
                 return Some(WindowType::Home);
             }
             KeyCode::Down => {
-                if self.selected_version + 1 != self.versions.len() {
-                    self.selected_version += 1;
+                if selected_item + 1 != self.versions.len() {
+                    self.list_state.select(Some(selected_item + 1));
                 } else {
-                    self.selected_version = 0;
+                    self.list_state.select(Some(0));
                 }
             }
             KeyCode::Up => {
-                if self.selected_version > 0 {
-                    self.selected_version -= 1;
+                if selected_item > 0 {
+                    self.list_state.select(Some(selected_item - 1));
                 } else {
-                    self.selected_version = self.versions.len() - 1;
+                    self.list_state.select(Some(self.versions.len() - 1));
                 }
             }
             KeyCode::Backspace => {
@@ -169,7 +170,6 @@ impl TuiWidget for ProfileCreatorWindow {
             )
             .highlight_symbol(">");
         frame.render_stateful_widget(list, chunks[1], &mut self.list_state);
-        self.list_state.select(Some(self.selected_version));
 
         let style = Style::default()
             .fg(Color::Cyan)

@@ -1,30 +1,33 @@
 use crossbeam_channel::{Receiver, Sender};
 use crossterm::event::KeyCode;
-use tui::{backend::Backend, text::Spans};
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, Tabs, Widget};
 use tui::Frame;
+use tui::{backend::Backend, text::Spans};
 
-use super::app::{TuiWidget, WindowType};
+use super::{
+    app::{TuiWidget, WindowType},
+    bottomnav::BottomNav,
+};
 
 pub struct HomeWindow {
     pub sender: Option<Sender<String>>,
     pub receiver: Option<Receiver<String>>,
     pub tab_index: usize,
-    // pub bottom_nav: BottomNav,
+    pub bottom_nav: BottomNav,
     // pub profiles_tab: ProfilesTab,
     // logger: LoggerFrame,
 }
 
 impl HomeWindow {
-    pub fn new() -> HomeWindow {
-        HomeWindow {
+    pub fn new() -> Self {
+        Self {
             sender: None,
             receiver: None,
             tab_index: 0,
             // logger: LoggerFrame::new(),
-            // bottom_nav: BottomNav::new(),
+            bottom_nav: BottomNav::new(),
             // profiles_tab: ProfilesTab::new()
         }
     }
@@ -32,6 +35,9 @@ impl HomeWindow {
 
 impl TuiWidget for HomeWindow {
     fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
+        if self.tab_index == 0 {
+            self.bottom_nav.handle_events(key);
+        }
         match key {
             KeyCode::Tab => {
                 self.tab_index = match self.tab_index {
@@ -62,7 +68,11 @@ impl TuiWidget for HomeWindow {
             )
             .split(frame.size());
 
-        let titles = ["Home", "Profiles"].iter().cloned().map(Spans::from).collect();
+        let titles = ["Home", "Profiles"]
+            .iter()
+            .cloned()
+            .map(Spans::from)
+            .collect();
         let tabs = Tabs::new(titles)
             .block(Block::default().borders(Borders::ALL).title("Tabs"))
             .select(self.tab_index)
@@ -70,18 +80,18 @@ impl TuiWidget for HomeWindow {
             .highlight_style(Style::default().fg(Color::Yellow));
         frame.render_widget(tabs, chunks[0]);
 
-        // match self.tab_index {
-        //     0 => {
-        //         self.logger.receiver = self.receiver.to_owned();
-        //         self.logger.render(backend, Some(chunks[1]));
+        match self.tab_index {
+            0 => {
+                // self.logger.receiver = self.receiver.to_owned();
+                // self.logger.render(backend, Some(chunks[1]));
 
-        //         self.bottom_nav.sender = self.sender.to_owned();
-        //         self.bottom_nav.render(backend, Some(chunks[2]));
-        //     }
-        //     1 => {
-        //         self.profiles_tab.render(backend, None);
-        //     }
-        //     _ => {}
-        // }
+                self.bottom_nav.sender = self.sender.to_owned();
+                self.bottom_nav.render(frame, Some(chunks[2]));
+            }
+            1 => {
+                // self.profiles_tab.render(backend, None);
+            }
+            _ => {}
+        }
     }
 }

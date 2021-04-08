@@ -39,7 +39,7 @@ impl App {
             windows: TuiWindows {
                 welcome: WelcomeWindow::new(),
                 profile_creator: ProfileCreatorWindow::new(),
-                home: HomeWindow::new()
+                home: HomeWindow::new(),
             },
         }
     }

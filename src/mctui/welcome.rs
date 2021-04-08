@@ -21,8 +21,8 @@ pub struct WelcomeWindow {
 }
 
 impl WelcomeWindow {
-    pub fn new() -> WelcomeWindow {
-        WelcomeWindow {
+    pub fn new() -> Self {
+        Self {
             input: (String::new(), String::new()),
             selected: Selected::Username,
         }

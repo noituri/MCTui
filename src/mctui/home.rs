@@ -2,7 +2,7 @@ use crossbeam_channel::{Receiver, Sender};
 use crossterm::event::KeyCode;
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Style};
-use tui::widgets::{Block, Borders, Tabs, Widget};
+use tui::widgets::{Block, Borders, Tabs};
 use tui::Frame;
 use tui::{backend::Backend, text::Spans};
 
@@ -10,6 +10,7 @@ use super::{
     app::{TuiWidget, WindowType},
     bottomnav::BottomNav,
     logger::LoggerFrame,
+    profilestab::ProfilesTab,
 };
 
 pub struct HomeWindow {
@@ -17,7 +18,7 @@ pub struct HomeWindow {
     pub receiver: Option<Receiver<String>>,
     pub tab_index: usize,
     pub bottom_nav: BottomNav,
-    // pub profiles_tab: ProfilesTab,
+    pub profiles_tab: ProfilesTab,
     logger: LoggerFrame,
 }
 
@@ -29,7 +30,7 @@ impl HomeWindow {
             tab_index: 0,
             logger: LoggerFrame::new(),
             bottom_nav: BottomNav::new(),
-            // profiles_tab: ProfilesTab::new()
+            profiles_tab: ProfilesTab::new(),
         }
     }
 }
@@ -38,6 +39,11 @@ impl TuiWidget for HomeWindow {
     fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         if self.tab_index == 0 {
             self.bottom_nav.handle_events(key);
+        } else {
+            let result = self.profiles_tab.handle_events(key);
+            if result.is_some() {
+                return result;
+            }
         }
         match key {
             KeyCode::Tab => {
@@ -90,7 +96,7 @@ impl TuiWidget for HomeWindow {
                 self.bottom_nav.render(frame, Some(chunks[2]));
             }
             1 => {
-                // self.profiles_tab.render(backend, None);
+                self.profiles_tab.render(frame, None);
             }
             _ => {}
         }

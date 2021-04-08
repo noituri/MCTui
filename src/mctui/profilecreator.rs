@@ -6,7 +6,7 @@ use crossterm::event::KeyCode;
 use tui::backend::Backend;
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
-use tui::widgets::{Block, Borders, Paragraph, Widget};
+use tui::widgets::{Block, Borders, Paragraph};
 use tui::{
     text::{Span, Spans},
     widgets::{List, ListItem, ListState, Wrap},

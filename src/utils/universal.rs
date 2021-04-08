@@ -1,13 +1,18 @@
-use crate::SETTINGS;
 use crate::structs::settings::Profile;
-use uuid::Uuid;
+use crate::SETTINGS;
 use std::fs::File;
 use std::process::Command;
+use uuid::Uuid;
 
 pub fn start_checker() {
     let settings = SETTINGS.lock().unwrap();
 
-    let output = Command::new("ping").arg("-c").arg("1").arg("8.8.8.8").output().unwrap();
+    let output = Command::new("ping")
+        .arg("-c")
+        .arg("1")
+        .arg("8.8.8.8")
+        .output()
+        .unwrap();
 
     *crate::CONNECTION.lock().unwrap() = output.status.success();
 
@@ -20,12 +25,12 @@ pub fn start_checker() {
 pub fn get_profile(id: &str) -> Option<Profile> {
     for p in SETTINGS.lock().unwrap().profiles.profiles.iter() {
         if p.id == id {
-            return Some(Profile{
+            return Some(Profile {
                 id: p.id.to_owned(),
                 name: p.name.to_owned(),
                 version: p.version.to_owned(),
                 asset: p.asset.to_owned(),
-                args: p.args.to_owned()
+                args: p.args.to_owned(),
             });
         }
     }
@@ -48,18 +53,17 @@ pub fn create_profile(name: String, version: String, asset: String, args: String
         }
 
         if !exists {
-            break
+            break;
         }
     }
 
-    settings.profiles.profiles.push(Profile{
+    settings.profiles.profiles.push(Profile {
         id: id.to_owned(),
         name,
         version,
         asset,
-        args
+        args,
     });
-
 
     if settings.profiles.selected == "" {
         settings.profiles.selected = id;
@@ -84,11 +88,24 @@ pub fn edit_profile(id: String, name: String, version: String) {
 pub fn delete_profile(id: String) {
     let mut settings = SETTINGS.lock().unwrap();
 
-    let index = settings.profiles.profiles.iter().position(|p| *p.id == id).unwrap();
+    let index = settings
+        .profiles
+        .profiles
+        .iter()
+        .position(|p| *p.id == id)
+        .unwrap();
     settings.profiles.profiles.remove(index);
     save_settings(&*settings);
 }
 
 pub fn save_settings(settings: &crate::settings::Settings) {
-    serde_json::to_writer_pretty(&File::create(format!("{}/mctui.json", std::env::var("DOT_MCTUI").unwrap())).unwrap(),settings).unwrap();
+    serde_json::to_writer_pretty(
+        &File::create(format!(
+            "{}/mctui.json",
+            std::env::var("DOT_MCTUI").unwrap()
+        ))
+        .unwrap(),
+        settings,
+    )
+    .unwrap();
 }

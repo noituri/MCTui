@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::path::Path;
-use std::io::{Write, Read};
-use std::fs::File;
 use std::error::Error;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub auth: Auth,
-    pub profiles: Profiles
+    pub profiles: Profiles,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -15,13 +15,13 @@ pub struct Auth {
     pub username: String,
     pub access_token: String,
     pub client_token: String,
-    pub online: bool
+    pub online: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Profiles {
     pub selected: String,
-    pub profiles: Vec<Profile>
+    pub profiles: Vec<Profile>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,7 +30,7 @@ pub struct Profile {
     pub name: String,
     pub version: String,
     pub asset: String,
-    pub args: String
+    pub args: String,
 }
 
 impl Settings {

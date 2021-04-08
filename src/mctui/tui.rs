@@ -1,13 +1,13 @@
-use crate::mctui::app::{App, WindowType, TuiWidget};
-use crate::mctui::events::{Events, Event};
-use tui::{Terminal, backend::CrosstermBackend};
+use crate::mctui::app::{App, TuiWidget, WindowType};
+use crate::mctui::events::{Event, Events};
 use crossbeam_channel::unbounded;
 use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, KeyCode},
     execute,
-    terminal::{enable_raw_mode, disable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    event::{self, DisableMouseCapture, EnableMouseCapture, KeyCode}
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::io::Write;
+use tui::{backend::CrosstermBackend, Terminal};
 
 pub fn start_tui() -> Result<(), failure::Error> {
     enable_raw_mode()?;
@@ -18,7 +18,7 @@ pub fn start_tui() -> Result<(), failure::Error> {
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
     terminal.clear()?;
-    
+
     let mut app = App::new();
 
     // let (s, r) = unbounded();
@@ -53,7 +53,7 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
     match events.next().unwrap() {
         Event::Input(input) => {
             if input == KeyCode::Char('q') {
-                return None
+                return None;
             }
 
             match &app.current_window {
@@ -99,7 +99,7 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
                 //         }
                 //     }
                 // },
-                _ => app.handle_events(input)
+                _ => app.handle_events(input),
             }
         }
         _ => {}

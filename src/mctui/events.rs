@@ -1,9 +1,9 @@
 // taken from tui-rs examples
 
-use std::{io, time::Instant};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
+use std::{io, time::Instant};
 
 use crossterm::event::{self, Event as CEvent, KeyCode};
 
@@ -37,12 +37,10 @@ impl Events {
 
     pub fn with_config(config: Config) -> Self {
         let (tx, rx) = mpsc::channel();
-        thread::spawn(move || {
-            loop {
-                if event::poll(config.tick_rate).unwrap() {
-                    if let CEvent::Key(key) = event::read().unwrap() {
-                        tx.send(Event::Input(key.code)).unwrap();
-                    }
+        thread::spawn(move || loop {
+            if event::poll(config.tick_rate).unwrap() {
+                if let CEvent::Key(key) = event::read().unwrap() {
+                    tx.send(Event::Input(key.code)).unwrap();
                 }
             }
         });

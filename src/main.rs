@@ -1,16 +1,16 @@
 mod constants;
-mod utils;
-mod structs;
 mod mctui;
+mod structs;
+mod utils;
 
-use std::path::Path;
-use platform_dirs::AppDirs;
-use utils::*;
-use structs::settings;
-use lazy_static::lazy_static;
-use std::sync::Mutex;
-use std::fs::create_dir_all;
 use crate::mctui::tui::start_tui;
+use lazy_static::lazy_static;
+use platform_dirs::AppDirs;
+use std::fs::create_dir_all;
+use std::path::Path;
+use std::sync::Mutex;
+use structs::settings;
+use utils::*;
 
 lazy_static! {
     static ref SETTINGS: Mutex<settings::Settings> = Mutex::new(settings::Settings::new().unwrap());
@@ -20,11 +20,15 @@ lazy_static! {
 fn main() {
     let mut dot = {
         let app_dirs = AppDirs::new(Some("mctui"), false).unwrap();
-        app_dirs.data_dir.into_os_string().into_string().expect("hmmm, ah yes paths")
+        app_dirs
+            .data_dir
+            .into_os_string()
+            .into_string()
+            .expect("hmmm, ah yes paths")
     };
     match std::env::var("DOT_MCTUI") {
         Ok(val) => dot = val,
-        Err(_) => std::env::set_var("DOT_MCTUI", dot.to_owned())
+        Err(_) => std::env::set_var("DOT_MCTUI", dot.to_owned()),
     }
 
     create_dir_all(dot.to_owned()).unwrap();

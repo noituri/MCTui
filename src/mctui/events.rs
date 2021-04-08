@@ -37,11 +37,20 @@ impl Events {
 
     pub fn with_config(config: Config) -> Self {
         let (tx, rx) = mpsc::channel();
+        let mut last_tick = Instant::now();
         thread::spawn(move || loop {
-            if event::poll(config.tick_rate).unwrap() {
+            let timeout = config
+                .tick_rate
+                .checked_sub(last_tick.elapsed())
+                .unwrap_or_else(|| Duration::from_secs(0));
+            if event::poll(timeout).unwrap() {
                 if let CEvent::Key(key) = event::read().unwrap() {
                     tx.send(Event::Input(key.code)).unwrap();
                 }
+            }
+            if last_tick.elapsed() >= config.tick_rate {
+                tx.send(Event::Tick).unwrap();
+                last_tick = Instant::now();
             }
         });
 

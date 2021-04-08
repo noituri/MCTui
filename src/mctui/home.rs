@@ -9,6 +9,7 @@ use tui::{backend::Backend, text::Spans};
 use super::{
     app::{TuiWidget, WindowType},
     bottomnav::BottomNav,
+    logger::LoggerFrame,
 };
 
 pub struct HomeWindow {
@@ -17,7 +18,7 @@ pub struct HomeWindow {
     pub tab_index: usize,
     pub bottom_nav: BottomNav,
     // pub profiles_tab: ProfilesTab,
-    // logger: LoggerFrame,
+    logger: LoggerFrame,
 }
 
 impl HomeWindow {
@@ -26,7 +27,7 @@ impl HomeWindow {
             sender: None,
             receiver: None,
             tab_index: 0,
-            // logger: LoggerFrame::new(),
+            logger: LoggerFrame::new(),
             bottom_nav: BottomNav::new(),
             // profiles_tab: ProfilesTab::new()
         }
@@ -82,8 +83,8 @@ impl TuiWidget for HomeWindow {
 
         match self.tab_index {
             0 => {
-                // self.logger.receiver = self.receiver.to_owned();
-                // self.logger.render(backend, Some(chunks[1]));
+                self.logger.receiver = self.receiver.to_owned();
+                self.logger.render(frame, Some(chunks[1]));
 
                 self.bottom_nav.sender = self.sender.to_owned();
                 self.bottom_nav.render(frame, Some(chunks[2]));

@@ -21,18 +21,13 @@ pub fn start_tui() -> Result<(), failure::Error> {
 
     let mut app = App::new();
 
-    // let (s, r) = unbounded();
-    // app.windows.home.sender = Some(s);
-    // app.windows.home.receiver = Some(r);
+    let (s, r) = unbounded();
+    app.windows.home.sender = Some(s);
+    app.windows.home.receiver = Some(r);
     let events = Events::new();
     loop {
         terminal.draw(|mut f| {
             app.render(&mut f);
-            // match app.current_window {
-            //     Window::Home(_) => app.windows.home.render(&mut f, None),
-            //     Window::Welcome(_) => app.windows.welcome.render(&mut f, None),
-            //     Window::ProfileCreator(_) => app.windows.profile_creator.render(&mut f, None),
-            // }
         })?;
 
         if handle_events(&events, &mut app).is_none() {

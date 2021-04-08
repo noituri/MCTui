@@ -7,8 +7,14 @@ use uuid::Uuid;
 pub fn start_checker() {
     let settings = SETTINGS.lock().unwrap();
 
+    let arg = if cfg!(target_os = "windows") {
+        "-n"
+    } else {
+        "-c"
+    };
+
     let output = Command::new("ping")
-        .arg("-c")
+        .arg(arg)
         .arg("1")
         .arg("8.8.8.8")
         .output()

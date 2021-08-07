@@ -1,10 +1,11 @@
 use crate::constants::*;
 use crate::structs::*;
+use futures::future::join_all;
 use reqwest;
 use reqwest::StatusCode;
 use sha1::Digest;
 use sha1::Sha1;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use std::fs::create_dir_all;
 use std::io;
 use std::io::Read;
@@ -19,7 +20,7 @@ pub async fn download_file(url: String, path: &str) {
     let output = Path::new(path).join(url_parts.last().unwrap());
 
     match reqwest::get(url.as_str()).await {
-        Ok(mut resp) => {
+        Ok(resp) => {
             match resp.status() {
                 StatusCode::OK => (),
                 _ => {
@@ -50,19 +51,21 @@ pub async fn download_file(url: String, path: &str) {
     };
 }
 
-fn verify_file_exists<'a>(
-    file_path: &'a str,
-    hash: &'a str,
-    to_download: &'a mut Mutex<HashMap<String, String>>,
+async fn verify_file_exists(
+    file_path: String,
+    hash: String,
+    to_download: Arc<Mutex<HashMap<String, String>>>,
     url: String,
 ) {
-    let path = Path::new(file_path);
+    let path = Path::new(&file_path);
     let mut file_dir = file_path.to_string();
     file_dir.truncate(file_path.rfind("/").unwrap());
-    let mut td = to_download.lock().unwrap();
-    if !path.exists() || path.is_dir() {
-        td.insert(url, file_dir);
-        return;
+    {
+        let mut td = to_download.lock().unwrap();
+        if !path.exists() || path.is_dir() {
+            td.insert(url, file_dir);
+            return;
+        }
     }
 
     let mut file = File::open(file_path).unwrap();
@@ -73,12 +76,15 @@ fn verify_file_exists<'a>(
     let mut sha = Sha1::default();
     sha.update(&bytes);
     if format!("{:x}", sha.finalize()).as_str() != hash {
+        let mut td = to_download.lock().unwrap();
         td.insert(url, file_dir);
     }
 }
 
-//TODO rewrite this (code duplication)
-pub async fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<String, String> {
+pub async fn verify_files(
+    libs_resp: libraries::Libraries,
+    profile: &str,
+) -> HashMap<String, String> {
     let dot = std::env::var("DOT_MCTUI").unwrap();
 
     create_dir_all(format!("{}/profiles/{}", dot.to_owned(), profile)).unwrap();
@@ -92,7 +98,10 @@ pub async fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> Has
         &libs_resp,
     )
     .unwrap();
-    let mut to_download: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
+
+    let mut verify_futures = Vec::new();
+    let to_download: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
+
     let assets_resp: assets::Assets = reqwest::get(libs_resp.asset_index.url.as_str())
         .await
         .unwrap()
@@ -101,32 +110,32 @@ pub async fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> Has
         .unwrap();
     let a_indx_path = format!("{}/assets/indexes", dot.to_owned());
 
-    verify_file_exists(
-        format!("{}/{}", a_indx_path, libs_resp.asset_index.id).as_str(),
-        format!("{}/{}", a_indx_path, libs_resp.asset_index.id).as_str(),
-        &mut to_download,
+    verify_futures.push(verify_file_exists(
+        format!("{}/{}", a_indx_path, libs_resp.asset_index.id),
+        format!("{}/{}", a_indx_path, libs_resp.asset_index.id),
+        to_download.clone(),
         libs_resp.asset_index.url,
-    );
+    ));
 
     for (_, asset) in &assets_resp.objects {
         let asset_path = format!("{}/assets/objects/{}", dot.to_owned(), &asset.hash[0..2]);
 
-        verify_file_exists(
-            format!("{}/{}", asset_path, &asset.hash).as_str(),
-            &asset.hash,
-            &mut to_download,
+        verify_futures.push(verify_file_exists(
+            format!("{}/{}", asset_path, &asset.hash),
+            asset.hash.to_owned(),
+            to_download.clone(),
             format!("{}/{}/{}", RESOURCES, &asset.hash[0..2], &asset.hash),
-        );
+        ));
     }
 
     let client_path = format!("{}/profiles/{}", dot.to_owned(), profile);
     let client = libs_resp.downloads.client.unwrap();
-    verify_file_exists(
-        format!("{}/client.jar", client_path).as_str(),
-        client.sha1.as_str(),
-        &mut to_download,
+    verify_futures.push(verify_file_exists(
+        format!("{}/client.jar", client_path),
+        client.sha1,
+        to_download.clone(),
         client.url,
-    );
+    ));
 
     for lib in libs_resp.libraries.iter() {
         match &lib.downloads.artifact {
@@ -138,83 +147,35 @@ pub async fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> Has
                     dot.to_owned(),
                     artifact.path.to_owned().unwrap()
                 );
-                verify_file_exists(
-                    format!("{}/{}", artifact_path, url_parts.last().unwrap()).as_str(),
-                    artifact.sha1.as_str(),
-                    &mut to_download,
+                verify_futures.push(verify_file_exists(
+                    format!("{}/{}", artifact_path, url_parts.last().unwrap()),
+                    artifact.sha1.to_owned(),
+                    to_download.clone(),
                     artifact.url.to_owned(),
-                );
+                ));
             }
             None => {}
         }
 
-        match &lib.downloads.classifiers {
-            Some(classifiers) => {
-                #[cfg(target_os = "linux")]
-                match &classifiers.natives_linux {
-                    Some(native) => {
-                        let url_parts: Vec<&str> = native.url.split('/').collect();
+        if let Some(natives) = lib.downloads.get_natives() {
+            let url_parts: Vec<&str> = natives.url.split('/').collect();
 
-                        let class_path = format!(
-                            "{}/libs/{}",
-                            dot.to_owned(),
-                            native.path.to_owned().unwrap()
-                        );
-                        verify_file_exists(
-                            format!("{}/{}", class_path, url_parts.last().unwrap()).as_str(),
-                            native.sha1.as_str(),
-                            &mut to_download,
-                            native.url.to_owned(),
-                        );
-                    }
-                    None => {}
-                }
-
-                #[cfg(target_os = "macos")]
-                match &classifiers.natives_osx {
-                    Some(native) => {
-                        let url_parts: Vec<&str> = native.url.split('/').collect();
-
-                        let class_path = format!(
-                            "{}/libs/{}",
-                            dot.to_owned(),
-                            native.path.to_owned().unwrap()
-                        );
-                        verify_file_exists(
-                            format!("{}/{}", class_path, url_parts.last().unwrap()).as_str(),
-                            native.sha1.as_str(),
-                            &mut to_download,
-                            native.url.to_owned(),
-                        );
-                    }
-                    None => {}
-                }
-
-                #[cfg(target_os = "windows")]
-                match &classifiers.natives_windows {
-                    Some(native) => {
-                        let url_parts: Vec<&str> = native.url.split('/').collect();
-
-                        let class_path = format!(
-                            "{}/libs/{}",
-                            dot.to_owned(),
-                            native.path.to_owned().unwrap()
-                        );
-                        verify_file_exists(
-                            format!("{}/{}", class_path, url_parts.last().unwrap()).as_str(),
-                            native.sha1.as_str(),
-                            &mut to_download,
-                            native.url.to_owned(),
-                        );
-                    }
-                    None => {}
-                }
-            }
-            None => {}
+            let class_path = format!(
+                "{}/libs/{}",
+                dot.to_owned(),
+                natives.path.to_owned().unwrap()
+            );
+            verify_futures.push(verify_file_exists(
+                format!("{}/{}", class_path, url_parts.last().unwrap()),
+                natives.sha1.to_owned(),
+                to_download.clone(),
+                natives.url.to_owned(),
+            ));
         }
     }
 
-    let td = to_download.lock().unwrap();
+    join_all(verify_futures).await;
 
+    let td = to_download.lock().unwrap();
     td.clone()
 }

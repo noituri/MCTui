@@ -1,11 +1,14 @@
-use crate::SETTINGS;
+use crate::{SETTINGS, utils::universal::delete_profile};
+use async_trait::async_trait;
 use crossterm::event::KeyCode;
-use tui::{backend::Backend, widgets::{Block, Borders, Paragraph, Table, Row, Wrap}};
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::Frame;
-use async_trait::async_trait;
+use tui::{
+    backend::Backend,
+    widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
+};
 
 use super::app::{TuiWidget, WindowType};
 
@@ -43,7 +46,7 @@ impl TuiWidget for ProfilesTab {
                     .to_owned();
                 std::mem::drop(settings);
 
-                crate::universal::delete_profile(id);
+                delete_profile(id);
             }
             KeyCode::Down => {
                 if self.selected_index + 1 != self.profiles_len {
@@ -100,9 +103,7 @@ impl TuiWidget for ProfilesTab {
             .constraints([Constraint::Ratio(2, 3), Constraint::Ratio(1, 4)].as_ref())
             .split(layout[1]);
 
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title("Profiles");
+        let block = Block::default().borders(Borders::ALL).title("Profiles");
         frame.render_widget(block, layout[1]);
 
         let header = Row::new(vec!["Name", "Version"]);
@@ -126,23 +127,28 @@ impl TuiWidget for ProfilesTab {
         let table = Table::new(rows)
             .header(header)
             .block(Block::default().borders(Borders::ALL))
-            .widths(&[Constraint::Length(10), Constraint::Length(10), Constraint::Length(10), Constraint::Length(10)]);
+            .widths(&[
+                Constraint::Length(10),
+                Constraint::Length(10),
+                Constraint::Length(10),
+                Constraint::Length(10),
+            ]);
         frame.render_widget(table, chunks[0]);
 
-        let style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
-        let spans = Spans::from(
-            vec![
-                " Press ".into(),
-                Span::styled("enter", style),
-                " to edit profile\n".into(),
-                " Press ".into(),
-                Span::styled("n", style),
-                " to create new profile\n".into(),
-                " Press ".into(),
-                Span::styled("d", style),
-                " to delete profile\n".into(),
-            ],
-        );
+        let style = Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD);
+        let spans = Spans::from(vec![
+            " Press ".into(),
+            Span::styled("enter", style),
+            " to edit profile\n".into(),
+            " Press ".into(),
+            Span::styled("n", style),
+            " to create new profile\n".into(),
+            " Press ".into(),
+            Span::styled("d", style),
+            " to delete profile\n".into(),
+        ]);
         let paragraph = Paragraph::new(spans)
             .wrap(Wrap { trim: true })
             .block(Block::default().borders(Borders::TOP));

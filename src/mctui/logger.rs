@@ -1,10 +1,10 @@
-use crossbeam_channel::Receiver;
+use async_trait::async_trait;
 use crossterm::event::KeyCode;
+use crossbeam_channel::Receiver;
 use tui::backend::Backend;
 use tui::layout::Rect;
 use tui::widgets::{Block, Borders, List, ListItem, Widget};
 use tui::Frame;
-use async_trait::async_trait;
 
 use super::app::{TuiWidget, WindowType};
 
@@ -25,17 +25,17 @@ impl LoggerFrame {
 #[async_trait]
 impl TuiWidget for LoggerFrame {
     async fn handle_events(&mut self, _: KeyCode) -> Option<WindowType> {
-        unimplemented!()
+        unimplemented!();
     }
 
     fn render<B>(&mut self, frame: &mut Frame<B>, rect: Option<Rect>)
     where
         B: Backend,
     {
-        let receiver = self.receiver.to_owned().unwrap();
         let rect = rect.unwrap();
 
-        for log in receiver.try_iter() {
+        let receiver = self.receiver.as_mut().unwrap();
+        for log in receiver.try_recv() {
             self.output.push(log);
         }
 

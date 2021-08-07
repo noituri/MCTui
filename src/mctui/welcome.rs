@@ -1,7 +1,7 @@
 use super::app::TuiWidget;
 use super::app::WindowType;
-use crate::universal::save_settings;
 use crate::SETTINGS;
+use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
@@ -9,7 +9,6 @@ use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, Paragraph};
 use tui::Frame;
 use tui::{backend::Backend, widgets::Wrap};
-use async_trait::async_trait;
 
 pub enum Selected {
     Username,
@@ -37,7 +36,7 @@ impl TuiWidget for WelcomeWindow {
             KeyCode::Enter => {
                 let mut settings = SETTINGS.lock().unwrap();
                 settings.auth.username = self.input.0.to_owned();
-                save_settings(&*settings);
+                settings.save();
 
                 if settings.profiles.profiles.len() == 0 {
                     return Some(WindowType::ProfileCreator(String::new()));

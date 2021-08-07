@@ -1,8 +1,8 @@
-use std::{collections::HashMap, io::Stdout, slice::Windows};
-use async_trait::async_trait;
 use super::{home::HomeWindow, profilecreator::ProfileCreatorWindow, welcome::WelcomeWindow};
 use crate::SETTINGS;
+use async_trait::async_trait;
 use crossterm::event::KeyCode;
+use std::{collections::HashMap, io::Stdout, slice::Windows};
 // use super::home::HomeWindow;
 // use super::profilecreator::ProfileCreatorWindow;
 use tui::backend::Backend;
@@ -29,11 +29,11 @@ pub struct TuiWindows {
 impl App {
     pub async fn new() -> Self {
         let settings = SETTINGS.lock().unwrap();
-        let mut current_window = WindowType::Home;
+        let mut current_window = WindowType::Welcome;
 
-        // if settings.auth.username != "" {
-        //     current_window = Window::Home();
-        // }
+        if settings.auth.username != "" {
+            current_window = WindowType::Home;
+        }
         Self {
             current_window,
             windows: TuiWindows {

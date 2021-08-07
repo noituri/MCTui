@@ -1,7 +1,8 @@
 use super::app::{TuiWidget, WindowType};
-use crate::constants::VERSIONS;
+use crate::{constants::VERSIONS, utils::universal::{create_profile, edit_profile}};
 use crate::structs::libraries::Libraries;
 use crate::structs::versions;
+use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::backend::Backend;
 use tui::layout::{Constraint, Direction, Layout, Rect};
@@ -12,7 +13,6 @@ use tui::{
     widgets::{List, ListItem, ListState, Wrap},
     Frame,
 };
-use async_trait::async_trait;
 
 pub struct ProfileCreatorWindow {
     pub input: String,
@@ -23,7 +23,8 @@ pub struct ProfileCreatorWindow {
 
 impl ProfileCreatorWindow {
     pub async fn new() -> Self {
-        let versions_resp: versions::Versions = reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
+        let versions_resp: versions::Versions =
+            reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -53,14 +54,14 @@ impl TuiWidget for ProfileCreatorWindow {
 
                 match self.id.to_owned() {
                     Some(id) => {
-                        crate::universal::edit_profile(
+                        edit_profile(
                             id,
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
                         );
                     }
                     None => {
-                        crate::universal::create_profile(
+                        create_profile(
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
                             assets_resp.asset_index.id,

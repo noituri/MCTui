@@ -6,9 +6,9 @@ mod utils;
 use crate::mctui::tui::start_tui;
 use lazy_static::lazy_static;
 use platform_dirs::AppDirs;
+use std::sync::Mutex;
 use std::fs::create_dir_all;
 use std::path::Path;
-use std::sync::Mutex;
 use structs::settings;
 use utils::*;
 
@@ -34,6 +34,6 @@ async fn main() {
 
     create_dir_all(dot.to_owned()).unwrap();
     std::env::set_current_dir(Path::new(&dot)).unwrap();
-    universal::start_checker();
+    universal::start_checker().await;
     start_tui().await.unwrap();
 }

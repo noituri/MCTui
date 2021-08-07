@@ -1,12 +1,12 @@
 use crate::mctui::app::{App, TuiWidget, WindowType};
 use crate::mctui::events::{Event, Events};
-use crossbeam_channel::unbounded;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::{error::Error, io::Write};
+use crossbeam_channel::unbounded;
 use tui::{backend::CrosstermBackend, Terminal};
 
 pub async fn start_tui() -> Result<(), Box<dyn Error>> {
@@ -22,8 +22,8 @@ pub async fn start_tui() -> Result<(), Box<dyn Error>> {
     let mut app = App::new().await;
 
     let (s, r) = unbounded();
-    app.windows.home.sender = Some(s);
-    app.windows.home.receiver = Some(r);
+    app.windows.home.bottom_nav.sender = Some(s);
+    app.windows.home.logger.receiver = Some(r);
     let events = Events::new();
     loop {
         terminal.draw(|mut f| {

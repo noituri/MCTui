@@ -30,7 +30,26 @@ pub struct Downloads {
     pub classifiers: Option<Classifier>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+impl Downloads {
+    pub fn get_natives<'a>(&'a self) -> &'a Option<File> {
+        match &self.classifiers {
+            Some(classifiers) => {
+                if cfg!(target_os = "linux") {
+                    &classifiers.natives_linux
+                } else if cfg!(target_os = "macos") {
+                    &classifiers.natives_osx
+                } else if cfg!(target_os = "windows") {
+                    &classifiers.natives_windows
+                } else {
+                    &None
+                }
+            }
+            None => &None,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct File {
     pub path: Option<String>,
     pub url: String,

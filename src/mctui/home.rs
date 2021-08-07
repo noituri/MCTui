@@ -1,11 +1,11 @@
-use crossbeam_channel::{Receiver, Sender};
+use async_trait::async_trait;
 use crossterm::event::KeyCode;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, Tabs};
 use tui::Frame;
 use tui::{backend::Backend, text::Spans};
-use async_trait::async_trait;
 
 use super::{
     app::{TuiWidget, WindowType},
@@ -15,19 +15,15 @@ use super::{
 };
 
 pub struct HomeWindow {
-    pub sender: Option<Sender<String>>,
-    pub receiver: Option<Receiver<String>>,
     pub tab_index: usize,
     pub bottom_nav: BottomNav,
     pub profiles_tab: ProfilesTab,
-    logger: LoggerFrame,
+    pub logger: LoggerFrame,
 }
 
 impl HomeWindow {
     pub fn new() -> Self {
         Self {
-            sender: None,
-            receiver: None,
             tab_index: 0,
             logger: LoggerFrame::new(),
             bottom_nav: BottomNav::new(),
@@ -40,7 +36,7 @@ impl HomeWindow {
 impl TuiWidget for HomeWindow {
     async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         if self.tab_index == 0 {
-            self.bottom_nav.handle_events(key);
+            self.bottom_nav.handle_events(key).await;
         } else {
             let result = self.profiles_tab.handle_events(key).await;
             if result.is_some() {
@@ -91,10 +87,7 @@ impl TuiWidget for HomeWindow {
 
         match self.tab_index {
             0 => {
-                self.logger.receiver = self.receiver.to_owned();
                 self.logger.render(frame, Some(chunks[1]));
-
-                self.bottom_nav.sender = self.sender.to_owned();
                 self.bottom_nav.render(frame, Some(chunks[2]));
             }
             1 => {

@@ -1,7 +1,8 @@
 use crate::SETTINGS;
-use crossbeam_channel::Sender;
+use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use std::thread;
+use crossbeam_channel::Sender;
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::Frame;
@@ -9,7 +10,6 @@ use tui::{
     backend::Backend,
     widgets::{Block, Borders, List, ListItem, ListState},
 };
-use async_trait::async_trait;
 
 use super::app::{TuiWidget, WindowType};
 
@@ -54,7 +54,7 @@ impl TuiWidget for BottomNav {
                         settings.profiles.selected =
                             settings.profiles.profiles[selected_item - 1].id.to_owned();
 
-                        crate::universal::save_settings(&*settings);
+                        settings.save();
                     }
 
                     self.items.state.select(Some(0));
@@ -68,14 +68,15 @@ impl TuiWidget for BottomNav {
 
                 match selected_item {
                     0 => {
-                        let settings = crate::SETTINGS.lock().unwrap();
-                        let selected = settings.profiles.selected.to_owned();
-                        std::mem::drop(settings);
+                        let selected =  {
+                            let settings = crate::SETTINGS.lock().unwrap();
+                            settings.profiles.selected.to_owned()
+                        };
 
                         match self.sender.to_owned() {
                             Some(sender) => {
-                                thread::spawn(move || {
-                                    crate::utils::launch::prepare_game(&selected, sender.clone());
+                                tokio::spawn(async move {
+                                    crate::utils::launch::prepare_game(&selected, sender.clone()).await;
                                 });
                             }
                             None => {}

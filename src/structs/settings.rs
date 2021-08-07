@@ -10,6 +10,20 @@ pub struct Settings {
     pub profiles: Profiles,
 }
 
+impl Settings {
+    pub fn save(&self) {
+        serde_json::to_writer_pretty(
+            &File::create(format!(
+                "{}/mctui.json",
+                std::env::var("DOT_MCTUI").unwrap()
+            ))
+            .unwrap(),
+            self,
+        )
+        .unwrap();
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Auth {
     pub username: String,

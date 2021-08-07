@@ -1,10 +1,9 @@
 use crate::structs::settings::Profile;
 use crate::SETTINGS;
-use std::fs::File;
 use std::process::Command;
 use uuid::Uuid;
 
-pub fn start_checker() {
+pub async fn start_checker() {
     let settings = SETTINGS.lock().unwrap();
 
     let arg = if cfg!(target_os = "windows") {
@@ -75,7 +74,7 @@ pub fn create_profile(name: String, version: String, asset: String, args: String
         settings.profiles.selected = id;
     }
 
-    save_settings(&*settings);
+    settings.save();
 }
 
 pub fn edit_profile(id: String, name: String, version: String) {
@@ -88,7 +87,7 @@ pub fn edit_profile(id: String, name: String, version: String) {
         }
     }
 
-    save_settings(&*settings);
+    settings.save();
 }
 
 pub fn delete_profile(id: String) {
@@ -101,17 +100,5 @@ pub fn delete_profile(id: String) {
         .position(|p| *p.id == id)
         .unwrap();
     settings.profiles.profiles.remove(index);
-    save_settings(&*settings);
-}
-
-pub fn save_settings(settings: &crate::settings::Settings) {
-    serde_json::to_writer_pretty(
-        &File::create(format!(
-            "{}/mctui.json",
-            std::env::var("DOT_MCTUI").unwrap()
-        ))
-        .unwrap(),
-        settings,
-    )
-    .unwrap();
+    settings.save();
 }

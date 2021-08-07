@@ -1,43 +1,54 @@
-use tui::backend::Backend;
-use tui::layout::{Layout, Direction, Constraint, Rect};
+use async_trait::async_trait;
+use crossterm::event::KeyCode;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tui::layout::{Constraint, Direction, Layout, Rect};
+use tui::style::{Color, Style};
+use tui::widgets::{Block, Borders, Tabs};
 use tui::Frame;
-use super::logger::LoggerFrame;
-use super::bottomnav::BottomNav;
-use super::profilestab::ProfilesTab;
-use super::app::{WinWidget, Window};
-use crossbeam_channel::{Receiver, Sender};
-use termion::event::Key;
-use tui::widgets::{Tabs, Block, Widget, Borders};
-use tui::style::{Style, Color};
+use tui::{backend::Backend, text::Spans};
+
+use super::{
+    app::{TuiWidget, WindowType},
+    bottomnav::BottomNav,
+    logger::LoggerFrame,
+    profilestab::ProfilesTab,
+};
 
 pub struct HomeWindow {
-    pub sender: Option<Sender<String>>,
-    pub receiver: Option<Receiver<String>>,
     pub tab_index: usize,
     pub bottom_nav: BottomNav,
     pub profiles_tab: ProfilesTab,
-    logger: LoggerFrame,
+    pub logger: LoggerFrame,
 }
 
-impl WinWidget for HomeWindow {
-    fn new() -> HomeWindow {
-        HomeWindow {
-            sender: None,
-            receiver: None,
+impl HomeWindow {
+    pub fn new() -> Self {
+        Self {
             tab_index: 0,
             logger: LoggerFrame::new(),
             bottom_nav: BottomNav::new(),
-            profiles_tab: ProfilesTab::new()
+            profiles_tab: ProfilesTab::new(),
         }
     }
+}
 
-    fn handle_events(&mut self, key: Key) -> Option<Window> {
+#[async_trait]
+impl TuiWidget for HomeWindow {
+    async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
+        if self.tab_index == 0 {
+            self.bottom_nav.handle_events(key).await;
+        } else {
+            let result = self.profiles_tab.handle_events(key).await;
+            if result.is_some() {
+                return result;
+            }
+        }
         match key {
-            Key::Char('\t') => {
+            KeyCode::Tab => {
                 self.tab_index = match self.tab_index {
                     0 => 1,
                     1 => 0,
-                    _ => 0
+                    _ => 0,
                 }
             }
             _ => {}
@@ -46,30 +57,41 @@ impl WinWidget for HomeWindow {
         None
     }
 
-    fn render<B>(&mut self, backend: &mut Frame<B>, _rect: Option<Rect>) where B: Backend {
+    fn render<B>(&mut self, frame: &mut Frame<B>, _: Option<Rect>)
+    where
+        B: Backend,
+    {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(3), Constraint::Percentage(72), Constraint::Percentage(20)].as_ref())
-            .split(backend.size());
+            .constraints(
+                [
+                    Constraint::Length(3),
+                    Constraint::Percentage(72),
+                    Constraint::Percentage(20),
+                ]
+                .as_ref(),
+            )
+            .split(frame.size());
 
-        Tabs::default()
+        let titles = ["Home", "Profiles"]
+            .iter()
+            .cloned()
+            .map(Spans::from)
+            .collect();
+        let tabs = Tabs::new(titles)
             .block(Block::default().borders(Borders::ALL).title("Tabs"))
-            .titles(&vec!["Home", "Profiles"])
             .select(self.tab_index)
             .style(Style::default().fg(Color::Cyan))
-            .highlight_style(Style::default().fg(Color::Yellow))
-            .render(backend, chunks[0]);
+            .highlight_style(Style::default().fg(Color::Yellow));
+        frame.render_widget(tabs, chunks[0]);
 
         match self.tab_index {
             0 => {
-                self.logger.receiver = self.receiver.to_owned();
-                self.logger.render(backend, Some(chunks[1]));
-
-                self.bottom_nav.sender = self.sender.to_owned();
-                self.bottom_nav.render(backend, Some(chunks[2]));
+                self.logger.render(frame, Some(chunks[1]));
+                self.bottom_nav.render(frame, Some(chunks[2]));
             }
             1 => {
-                self.profiles_tab.render(backend, None);
+                self.profiles_tab.render(frame, None);
             }
             _ => {}
         }

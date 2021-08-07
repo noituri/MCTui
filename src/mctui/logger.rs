@@ -1,33 +1,41 @@
-use tui::widgets::{Block, Borders, Text, Widget, List};
-use tui::Frame;
-use tui::layout::Rect;
-use tui::backend::Backend;
+use async_trait::async_trait;
+use crossterm::event::KeyCode;
 use crossbeam_channel::Receiver;
-use super::app::{WinWidget, Window};
-use termion::event::Key;
+use tui::backend::Backend;
+use tui::layout::Rect;
+use tui::widgets::{Block, Borders, List, ListItem, Widget};
+use tui::Frame;
+
+use super::app::{TuiWidget, WindowType};
 
 pub struct LoggerFrame {
     pub receiver: Option<Receiver<String>>,
-    output: Vec<String>
+    output: Vec<String>,
 }
 
-impl WinWidget for LoggerFrame {
-    fn new() -> LoggerFrame {
-        LoggerFrame {
+impl LoggerFrame {
+    pub fn new() -> Self {
+        Self {
             receiver: None,
-            output: Vec::new()
+            output: Vec::new(),
         }
     }
+}
 
-    fn handle_events(&mut self, _key: Key) -> Option<Window> {
-        unimplemented!()
+#[async_trait]
+impl TuiWidget for LoggerFrame {
+    async fn handle_events(&mut self, _: KeyCode) -> Option<WindowType> {
+        unimplemented!();
     }
 
-    fn render<B>(&mut self, backend: &mut Frame<B>, rect: Option<Rect>) where B: Backend {
-        let receiver = self.receiver.to_owned().unwrap();
+    fn render<B>(&mut self, frame: &mut Frame<B>, rect: Option<Rect>)
+    where
+        B: Backend,
+    {
         let rect = rect.unwrap();
 
-        for log in receiver.try_iter() {
+        let receiver = self.receiver.as_mut().unwrap();
+        for log in receiver.try_recv() {
             self.output.push(log);
         }
 
@@ -35,12 +43,12 @@ impl WinWidget for LoggerFrame {
             self.output.remove(0);
         }
 
-        let logs = self.output.iter().map(|log| Text::raw(log));
-
-        List::new(logs)
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .title("Logs"))
-            .render(backend, rect);
+        let logs: Vec<ListItem> = self
+            .output
+            .iter()
+            .map(|log| ListItem::new(log.as_str()))
+            .collect();
+        let list = List::new(logs).block(Block::default().borders(Borders::ALL).title("Logs"));
+        frame.render_widget(list, rect);
     }
 }

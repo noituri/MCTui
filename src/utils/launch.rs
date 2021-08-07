@@ -42,7 +42,6 @@ pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
 
     gen_run_cmd(
         format!("{}/profiles/{}", std::env::var("DOT_MCTUI").unwrap(), profile.name).as_str(),
-        "java",
         "/home/noituri/Development/lwjgl-2.9.3/native/linux/",
         &username,
         &profile.version,
@@ -103,6 +102,7 @@ pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
                 }
 
                 #[cfg(target_os = "windows")]
+
                     match &classifiers.natives_windows {
                     Some(native) => {
                         let file_name= native.path.to_owned().unwrap();
@@ -121,8 +121,18 @@ pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
     Some(libs)
 }
 
-pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, version: &str, asset_index: &str, args: &str, sender: Sender<String>) {
-    sender.send("Launching Minecraft Instance...".to_string()).unwrap();
+pub fn gen_run_cmd(
+    profile: &str,
+    natives: &str,
+    username: &str,
+    version: &str,
+    asset_index: &str,
+    args: &str,
+    sender: Sender<String>,
+) {
+    sender
+        .send("Launching Minecraft Instance...".to_string())
+        .unwrap();
 
     let dot = std::env::var("DOT_MCTUI").unwrap();
 
@@ -131,11 +141,30 @@ pub fn gen_run_cmd(profile: &str, java: &str, natives: &str, username: &str, ver
     let game_dir = format!("{}/game", profile);
 
     create_dir_all(game_dir.to_owned()).unwrap();
-    // TODO: Split this into separate options
-    let final_cmd = format!("{} {} -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path={} -Dminecraft.launcher.brand=java-minecraft-launcher -Dminecraft.launcher.version=1.6.89-j -cp {}:{}/client.jar net.minecraft.client.main.Main --username {} --version '{} MCTui' --accessToken 0 --userProperties {{}} --gameDir {} --assetsDir {} --assetIndex {} --width 1280 --height 720",java, args, natives, libs, profile, username, version, game_dir, assets, asset_index);
-    let mut cmd = Command::new("bash")
-        .arg("-c")
-        .arg(final_cmd)
+
+    let cmd_arguments = [
+        args.to_string(),
+        "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump"
+            .to_string(),
+        format!("-Djava.library.path={}", natives),
+        "-Dminecraft.launcher.brand=java-minecraft-launcher".to_string(),
+        "-Dminecraft.launcher.version=1.6.89-j".to_string(),
+        "-cp".to_string(),
+        format!("{}:{}/client.jar", libs, profile),
+        "net.minecraft.client.main.Main".to_string(),
+        format!("--username={}", username),
+        format!("--version='{} MCTui'", version),
+        "--accessToken 0".to_string(),
+        "--userProperties={{}}".to_string(),
+        format!("--gameDir={}", game_dir),
+        format!("--assetsDir={}", assets),
+        format!("--assetIndex={}", asset_index),
+        "--width=1280".to_string(),
+        "--height=720".to_string(),
+    ];
+
+    let mut cmd = Command::new("java")
+        .args(cmd_arguments)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()

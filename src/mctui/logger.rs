@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use crossterm::event::KeyCode;
 use crossbeam_channel::Receiver;
+use crossterm::event::KeyCode;
 use tui::backend::Backend;
 use tui::layout::Rect;
-use tui::widgets::{Block, Borders, List, ListItem, Widget};
+use tui::widgets::{Block, Borders, List, ListItem};
 use tui::Frame;
 
 use super::app::{TuiWidget, WindowType};

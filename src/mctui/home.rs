@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
-use tokio::sync::mpsc::{Receiver, Sender};
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, Tabs};

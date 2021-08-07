@@ -2,12 +2,9 @@ use super::{home::HomeWindow, profilecreator::ProfileCreatorWindow, welcome::Wel
 use crate::SETTINGS;
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
-use std::{collections::HashMap, io::Stdout, slice::Windows};
-// use super::home::HomeWindow;
-// use super::profilecreator::ProfileCreatorWindow;
 use tui::backend::Backend;
 use tui::layout::Rect;
-use tui::{widgets::Widget, Frame};
+use tui::Frame;
 
 pub enum WindowType {
     Home,
@@ -51,7 +48,6 @@ impl App {
             WindowType::Welcome => self.windows.welcome.render(frame, None),
             WindowType::ProfileCreator(_) => self.windows.profile_creator.render(frame, None),
             WindowType::Home => self.windows.home.render(frame, None),
-            _ => unimplemented!(),
         }
     }
 
@@ -60,7 +56,6 @@ impl App {
             WindowType::Welcome => self.windows.welcome.handle_events(key),
             WindowType::ProfileCreator(_) => self.windows.profile_creator.handle_events(key),
             WindowType::Home => self.windows.home.handle_events(key),
-            _ => unimplemented!(),
         };
 
         if let Some(route) = window_route.await {

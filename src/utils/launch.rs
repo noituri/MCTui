@@ -1,14 +1,14 @@
 use crate::constants::*;
 use crate::structs::*;
 use crate::utils::files;
-use futures::{FutureExt, future::{self, join_all}};
+use crossbeam_channel::Sender;
+use futures::{future::join_all, FutureExt};
 use reqwest;
 use std::fs::{create_dir_all, File};
 use std::io::Read;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::{Command, Stdio};
-use crossbeam_channel::Sender;
 
 pub async fn prepare_game(profile_id: &str, sender: Sender<String>) {
     let username = {
@@ -52,7 +52,9 @@ pub async fn prepare_game(profile_id: &str, sender: Sender<String>) {
                 for (i, chunk) in download_chunks.enumerate() {
                     join_all(chunk.iter().map(|f| f.clone())).await;
 
-                    sender.send(format!("Downloaded {}/{}", i+1, chunks_len-1)).unwrap();
+                    sender
+                        .send(format!("Downloaded {}/{}", i + 1, chunks_len))
+                        .unwrap();
                 }
                 sender.send("All files downloaded".to_string()).unwrap();
             }
@@ -63,14 +65,18 @@ pub async fn prepare_game(profile_id: &str, sender: Sender<String>) {
     }
 
     gen_run_cmd(
-        &format!("{}/profiles/{}", std::env::var("DOT_MCTUI").unwrap(), profile.name),
-        "/home/noituri/Development/lwjgl-2.9.3/native/linux/",
+        &format!(
+            "{}/profiles/{}",
+            std::env::var("DOT_MCTUI").unwrap(),
+            profile.name
+        ),
         &username,
         &profile.version,
         &profile.asset,
         &profile.args,
         sender.clone(),
-    ).await;
+    )
+    .await;
 }
 
 pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
@@ -87,13 +93,19 @@ pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
 
     let mut libs = String::new();
 
+    let sep = if cfg!(target_os = "windows") {
+        ";"
+    } else {
+        ":"
+    };
+
     for lib in version.libraries.iter() {
         match &lib.downloads.artifact {
             Some(artifact) => {
                 let artifact_path = artifact.path.to_owned().unwrap();
                 let file_name = artifact_path.split("/").last().unwrap();
 
-                libs.push_str(format!("{}/{}/{}:", path, artifact_path, file_name).as_str());
+                libs.push_str(format!("{}/{}/{}{}", path, artifact_path, file_name, sep).as_str());
             }
             None => {}
         }
@@ -102,17 +114,22 @@ pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
             let natives_path = natives.path.to_owned().unwrap();
             let file_name = natives_path.split("/").last().unwrap();
 
-            libs.push_str(format!("{}/{}/{}:", path, natives_path, file_name).as_str());
+            libs.push_str(format!("{}/{}/{}{}", path, natives_path, file_name, sep).as_str());
         }
     }
 
-    libs = libs.trim_end_matches(":").to_string();
+    libs = libs.trim_end_matches(sep).to_string();
+
+    // FIXME: use path bufs (?) or something smarter
+    if cfg!(target_os = "windows") {
+        libs = libs.replace("/", "\\");
+    }
     Some(libs)
 }
 
-pub fn gen_run_cmd(
+pub async fn gen_run_cmd(
     profile: &str,
-    natives: &str,
+    // natives: &str,
     username: &str,
     version: &str,
     asset_index: &str,
@@ -125,26 +142,36 @@ pub fn gen_run_cmd(
 
     let dot = std::env::var("DOT_MCTUI").unwrap();
 
-    let libs = gen_libs_path(format!("{}/libs", dot.to_owned()).as_str(), profile).unwrap();
-    let assets = format!("{}/assets", dot);
-    let game_dir = format!("{}/game", profile);
+    let mut libs = gen_libs_path(format!("{}/libs", dot.to_owned()).as_str(), profile).unwrap();
+    let mut assets = format!("{}/assets", dot);
+    let mut game_dir = format!("{}/game", profile);
+    let mut sep = ":";
+
+    // FIXME: use path bufs (?) or something smarter
+    if cfg!(target_os = "windows") {
+        libs = libs.replace("/", "\\");
+        assets = assets.replace("/", "\\");
+        game_dir = game_dir.replace("/", "\\");
+        sep = ";";
+    }
 
     create_dir_all(game_dir.to_owned()).unwrap();
 
-    let cmd_arguments = [
-        args.to_string(),
+    let mut args = args.split(" ").map(|a| a.to_owned()).collect::<Vec<_>>();
+
+    let additional_arguments = [
         "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump"
             .to_string(),
-        format!("-Djava.library.path={}", natives),
+        // format!("-Djava.library.path={}", natives),
         "-Dminecraft.launcher.brand=java-minecraft-launcher".to_string(),
         "-Dminecraft.launcher.version=1.6.89-j".to_string(),
         "-cp".to_string(),
-        format!("{}:{}/client.jar", libs, profile),
+        format!("{}{}{}/client.jar", libs, sep, profile),
         "net.minecraft.client.main.Main".to_string(),
         format!("--username={}", username),
         format!("--version='{} MCTui'", version),
-        "--accessToken 0".to_string(),
-        "--userProperties={{}}".to_string(),
+        "--accessToken=0".to_string(),
+        // "--userProperties={{}}".to_string(),
         format!("--gameDir={}", game_dir),
         format!("--assetsDir={}", assets),
         format!("--assetIndex={}", asset_index),
@@ -152,8 +179,10 @@ pub fn gen_run_cmd(
         "--height=720".to_string(),
     ];
 
+    args.extend(additional_arguments);
+
     let mut cmd = Command::new("java")
-        .args(cmd_arguments)
+        .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -164,7 +193,15 @@ pub fn gen_run_cmd(
         let stdout_reader = BufReader::new(stdout);
         let stdout_lines = stdout_reader.lines();
 
+        let stderr = cmd.stderr.as_mut().unwrap();
+        let stderr_reader = BufReader::new(stderr);
+        let stderr_lines = stderr_reader.lines();
+
         for line in stdout_lines {
+            sender.send(format!("{}\n", line.unwrap())).unwrap();
+        }
+
+        for line in stderr_lines {
             sender.send(format!("{}\n", line.unwrap())).unwrap();
         }
     }

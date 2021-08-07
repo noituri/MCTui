@@ -1,12 +1,12 @@
-use crate::mctui::app::{App, TuiWidget, WindowType};
+use crate::mctui::app::App;
 use crate::mctui::events::{Event, Events};
+use crossbeam_channel::unbounded;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, KeyCode},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::{error::Error, io::Write};
-use crossbeam_channel::unbounded;
+use std::error::Error;
 use tui::{backend::CrosstermBackend, Terminal};
 
 pub async fn start_tui() -> Result<(), Box<dyn Error>> {
@@ -51,51 +51,7 @@ async fn handle_events(events: &Events, app: &mut App) -> Option<()> {
                 return None;
             }
 
-            match &app.current_window {
-                // Window::Home(_) => {
-                //     match app.windows.home.handle_events(input) {
-                //         Some(route) => app.current_window = route,
-                //         None => {}
-                //     }
-
-                //     if app.windows.home.tab_index == 1 {
-                //         match app.windows.home.profiles_tab.handle_events(input) {
-                //             Some(route) => {
-                //                 match &route {
-                //                     Window::ProfileCreator(id) => {
-                //                         if id != "" {
-                //                             app.windows.profile_creator.id = Some(id.to_owned());
-                //                             match crate::universal::get_profile(&id) {
-                //                                 Some(profile) => {
-                //                                     app.windows.profile_creator.input = profile.name.to_owned();
-
-                //                                     for (i, v) in app.windows.profile_creator.versions.iter().enumerate() {
-                //                                         if v.id == profile.version {
-                //                                             app.windows.profile_creator.selected_version = i;
-                //                                             break;
-                //                                         }
-                //                                     }
-                //                                 }
-                //                                 None => {}
-                //                             }
-                //                         }
-                //                     }
-                //                     _ => {}
-                //                 }
-
-                //                 app.current_window = route
-                //             },
-                //             None => {}
-                //         }
-                //     } else {
-                //         match app.windows.home.bottom_nav.handle_events(input) {
-                //             Some(route) => app.current_window = route,
-                //             None => {}
-                //         }
-                //     }
-                // },
-                _ => app.handle_events(input).await,
-            }
+            app.handle_events(input).await;
         }
         _ => {}
     }

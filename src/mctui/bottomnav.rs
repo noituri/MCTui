@@ -1,8 +1,7 @@
 use crate::SETTINGS;
 use async_trait::async_trait;
-use crossterm::event::KeyCode;
-use std::thread;
 use crossbeam_channel::Sender;
+use crossterm::event::KeyCode;
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::Frame;
@@ -68,7 +67,7 @@ impl TuiWidget for BottomNav {
 
                 match selected_item {
                     0 => {
-                        let selected =  {
+                        let selected = {
                             let settings = crate::SETTINGS.lock().unwrap();
                             settings.profiles.selected.to_owned()
                         };
@@ -76,7 +75,8 @@ impl TuiWidget for BottomNav {
                         match self.sender.to_owned() {
                             Some(sender) => {
                                 tokio::spawn(async move {
-                                    crate::utils::launch::prepare_game(&selected, sender.clone()).await;
+                                    crate::utils::launch::prepare_game(&selected, sender.clone())
+                                        .await;
                                 });
                             }
                             None => {}

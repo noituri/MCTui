@@ -5,13 +5,13 @@ use reqwest;
 use reqwest::StatusCode;
 use sha1::Digest;
 use sha1::Sha1;
-use std::{collections::HashMap, sync::Arc};
 use std::fs::create_dir_all;
+use std::fs::File;
 use std::io;
 use std::io::Read;
 use std::path::Path;
 use std::sync::Mutex;
-use std::{fs::File, path::PathBuf};
+use std::{collections::HashMap, sync::Arc};
 
 pub async fn download_file(url: String, path: &str) {
     create_dir_all(path).unwrap();

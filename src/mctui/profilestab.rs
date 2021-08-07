@@ -1,4 +1,4 @@
-use crate::{SETTINGS, utils::universal::delete_profile};
+use crate::{utils::universal::delete_profile, SETTINGS};
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::layout::{Constraint, Direction, Layout, Rect};

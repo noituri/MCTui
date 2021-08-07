@@ -9,6 +9,7 @@ use tui::{
     backend::Backend,
     widgets::{Block, Borders, List, ListItem, ListState},
 };
+use async_trait::async_trait;
 
 use super::app::{TuiWidget, WindowType};
 
@@ -41,8 +42,9 @@ impl BottomNav {
     }
 }
 
+#[async_trait]
 impl TuiWidget for BottomNav {
-    fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
+    async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         let selected_item = self.items.state.selected().unwrap_or_default();
         match key {
             KeyCode::Enter => {

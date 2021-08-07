@@ -5,6 +5,7 @@ use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, Tabs};
 use tui::Frame;
 use tui::{backend::Backend, text::Spans};
+use async_trait::async_trait;
 
 use super::{
     app::{TuiWidget, WindowType},
@@ -35,12 +36,13 @@ impl HomeWindow {
     }
 }
 
+#[async_trait]
 impl TuiWidget for HomeWindow {
-    fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
+    async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         if self.tab_index == 0 {
             self.bottom_nav.handle_events(key);
         } else {
-            let result = self.profiles_tab.handle_events(key);
+            let result = self.profiles_tab.handle_events(key).await;
             if result.is_some() {
                 return result;
             }

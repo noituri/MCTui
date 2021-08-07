@@ -12,13 +12,13 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::{fs::File, path::PathBuf};
 
-pub fn download_file(url: String, path: &str) {
+pub async fn download_file(url: String, path: &str) {
     create_dir_all(path).unwrap();
 
     let url_parts: Vec<&str> = url.split('/').collect();
     let output = Path::new(path).join(url_parts.last().unwrap());
 
-    match reqwest::get(url.as_str()) {
+    match reqwest::get(url.as_str()).await {
         Ok(mut resp) => {
             match resp.status() {
                 StatusCode::OK => (),
@@ -38,7 +38,9 @@ pub fn download_file(url: String, path: &str) {
                     return;
                 }
             };
-            match io::copy(&mut resp, &mut file) {
+
+            let bytes = resp.bytes().await.unwrap();
+            match io::copy(&mut bytes.as_ref(), &mut file) {
                 Ok(_) => {} //println!("File {} has been downloaded", output.display()),
                 Err(err) => println!("Could not download this file: {} | Error: {}", url, err),
             }
@@ -69,14 +71,14 @@ fn verify_file_exists<'a>(
     File::read_to_end(&mut file, &mut bytes).unwrap();
 
     let mut sha = Sha1::default();
-    sha.input(&bytes);
-    if format!("{:x}", sha.result()).as_str() != hash {
+    sha.update(&bytes);
+    if format!("{:x}", sha.finalize()).as_str() != hash {
         td.insert(url, file_dir);
     }
 }
 
 //TODO rewrite this (code duplication)
-pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<String, String> {
+pub async fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<String, String> {
     let dot = std::env::var("DOT_MCTUI").unwrap();
 
     create_dir_all(format!("{}/profiles/{}", dot.to_owned(), profile)).unwrap();
@@ -92,8 +94,10 @@ pub fn verify_files(libs_resp: libraries::Libraries, profile: &str) -> HashMap<S
     .unwrap();
     let mut to_download: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
     let assets_resp: assets::Assets = reqwest::get(libs_resp.asset_index.url.as_str())
+        .await
         .unwrap()
         .json()
+        .await
         .unwrap();
     let a_indx_path = format!("{}/assets/indexes", dot.to_owned());
 

@@ -1,5 +1,5 @@
 use std::{collections::HashMap, io::Stdout, slice::Windows};
-
+use async_trait::async_trait;
 use super::{home::HomeWindow, profilecreator::ProfileCreatorWindow, welcome::WelcomeWindow};
 use crate::SETTINGS;
 use crossterm::event::KeyCode;
@@ -27,7 +27,7 @@ pub struct TuiWindows {
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         let settings = SETTINGS.lock().unwrap();
         let mut current_window = WindowType::Home;
 
@@ -38,7 +38,7 @@ impl App {
             current_window,
             windows: TuiWindows {
                 welcome: WelcomeWindow::new(),
-                profile_creator: ProfileCreatorWindow::new(),
+                profile_creator: ProfileCreatorWindow::new().await,
                 home: HomeWindow::new(),
             },
         }
@@ -55,7 +55,7 @@ impl App {
         }
     }
 
-    pub fn handle_events(&mut self, key: KeyCode) {
+    pub async fn handle_events(&mut self, key: KeyCode) {
         let window_route = match self.current_window {
             WindowType::Welcome => self.windows.welcome.handle_events(key),
             WindowType::ProfileCreator(_) => self.windows.profile_creator.handle_events(key),
@@ -63,14 +63,15 @@ impl App {
             _ => unimplemented!(),
         };
 
-        if let Some(route) = window_route {
+        if let Some(route) = window_route.await {
             self.current_window = route;
         }
     }
 }
 
+#[async_trait]
 pub trait TuiWidget {
-    fn handle_events(&mut self, key: KeyCode) -> Option<WindowType>;
+    async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType>;
     fn render<B>(&mut self, frame: &mut Frame<B>, _: Option<Rect>)
     where
         B: Backend;

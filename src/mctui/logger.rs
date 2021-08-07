@@ -4,6 +4,7 @@ use tui::backend::Backend;
 use tui::layout::Rect;
 use tui::widgets::{Block, Borders, List, ListItem, Widget};
 use tui::Frame;
+use async_trait::async_trait;
 
 use super::app::{TuiWidget, WindowType};
 
@@ -21,8 +22,9 @@ impl LoggerFrame {
     }
 }
 
+#[async_trait]
 impl TuiWidget for LoggerFrame {
-    fn handle_events(&mut self, _: KeyCode) -> Option<WindowType> {
+    async fn handle_events(&mut self, _: KeyCode) -> Option<WindowType> {
         unimplemented!()
     }
 

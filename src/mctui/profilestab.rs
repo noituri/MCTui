@@ -5,6 +5,7 @@ use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::Frame;
+use async_trait::async_trait;
 
 use super::app::{TuiWidget, WindowType};
 
@@ -22,8 +23,9 @@ impl ProfilesTab {
     }
 }
 
+#[async_trait]
 impl TuiWidget for ProfilesTab {
-    fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
+    async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         match key {
             KeyCode::Enter => {
                 let settings = SETTINGS.lock().unwrap();

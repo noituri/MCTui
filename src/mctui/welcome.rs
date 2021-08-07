@@ -9,6 +9,7 @@ use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, Paragraph};
 use tui::Frame;
 use tui::{backend::Backend, widgets::Wrap};
+use async_trait::async_trait;
 
 pub enum Selected {
     Username,
@@ -29,8 +30,9 @@ impl WelcomeWindow {
     }
 }
 
+#[async_trait]
 impl TuiWidget for WelcomeWindow {
-    fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
+    async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         match key {
             KeyCode::Enter => {
                 let mut settings = SETTINGS.lock().unwrap();

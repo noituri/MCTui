@@ -9,7 +9,7 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
+pub async fn prepare_game(profile_id: &str, sender: Sender<String>) {
     let settings = crate::SETTINGS.lock().unwrap();
     let username = settings.auth.username.to_owned();
     std::mem::drop(settings);
@@ -22,15 +22,15 @@ pub fn prepare_game(profile_id: &str, sender: Sender<String>) {
     let profile = profile.unwrap();
 
     if *crate::CONNECTION.lock().unwrap() {
-        let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
+        let versions_resp: versions::Versions = reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
 
         for v in versions_resp.versions {
             if v.id == profile.version {
                 sender.send("Verifying files".to_string()).unwrap();
                 let to_download = files::verify_files(
-                    reqwest::get(v.url.as_str()).unwrap().json().unwrap(),
+                    reqwest::get(v.url.as_str()).await.unwrap().json().await.unwrap(),
                     &profile.name,
-                );
+                ).await;
 
                 sender.send("Downloading files".to_string()).unwrap();
                 for (k, v) in &to_download {

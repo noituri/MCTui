@@ -17,7 +17,8 @@ lazy_static! {
     static ref CONNECTION: Mutex<bool> = Mutex::new(false);
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut dot = {
         let app_dirs = AppDirs::new(Some("mctui"), false).unwrap();
         app_dirs
@@ -34,5 +35,5 @@ fn main() {
     create_dir_all(dot.to_owned()).unwrap();
     std::env::set_current_dir(Path::new(&dot)).unwrap();
     universal::start_checker();
-    start_tui().expect("Error occurred");
+    start_tui().await.unwrap();
 }

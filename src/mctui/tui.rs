@@ -6,10 +6,10 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::io::Write;
+use std::{error::Error, io::Write};
 use tui::{backend::CrosstermBackend, Terminal};
 
-pub fn start_tui() -> Result<(), failure::Error> {
+pub async fn start_tui() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -19,7 +19,7 @@ pub fn start_tui() -> Result<(), failure::Error> {
     terminal.hide_cursor()?;
     terminal.clear()?;
 
-    let mut app = App::new();
+    let mut app = App::new().await;
 
     let (s, r) = unbounded();
     app.windows.home.sender = Some(s);
@@ -30,7 +30,7 @@ pub fn start_tui() -> Result<(), failure::Error> {
             app.render(&mut f);
         })?;
 
-        if handle_events(&events, &mut app).is_none() {
+        if handle_events(&events, &mut app).await.is_none() {
             disable_raw_mode()?;
             execute!(
                 terminal.backend_mut(),
@@ -44,7 +44,7 @@ pub fn start_tui() -> Result<(), failure::Error> {
     Ok(())
 }
 
-fn handle_events(events: &Events, app: &mut App) -> Option<()> {
+async fn handle_events(events: &Events, app: &mut App) -> Option<()> {
     match events.next().unwrap() {
         Event::Input(input) => {
             if input == KeyCode::Char('q') {
@@ -94,7 +94,7 @@ fn handle_events(events: &Events, app: &mut App) -> Option<()> {
                 //         }
                 //     }
                 // },
-                _ => app.handle_events(input),
+                _ => app.handle_events(input).await,
             }
         }
         _ => {}

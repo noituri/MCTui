@@ -12,6 +12,7 @@ use tui::{
     widgets::{List, ListItem, ListState, Wrap},
     Frame,
 };
+use async_trait::async_trait;
 
 pub struct ProfileCreatorWindow {
     pub input: String,
@@ -21,8 +22,8 @@ pub struct ProfileCreatorWindow {
 }
 
 impl ProfileCreatorWindow {
-    pub fn new() -> Self {
-        let versions_resp: versions::Versions = reqwest::get(VERSIONS).unwrap().json().unwrap();
+    pub async fn new() -> Self {
+        let versions_resp: versions::Versions = reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -35,16 +36,19 @@ impl ProfileCreatorWindow {
     }
 }
 
+#[async_trait]
 impl TuiWidget for ProfileCreatorWindow {
-    fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
+    async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         let selected_item = self.list_state.selected().unwrap_or_default();
         match key {
             KeyCode::Enter => {
                 let selected_version = &self.versions[selected_item];
                 //TODO check connection
                 let assets_resp: Libraries = reqwest::get(selected_version.url.as_str())
+                    .await
                     .unwrap()
                     .json()
+                    .await
                     .unwrap();
 
                 match self.id.to_owned() {

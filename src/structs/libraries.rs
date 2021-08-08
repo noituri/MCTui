@@ -31,7 +31,7 @@ pub struct Downloads {
 }
 
 impl Downloads {
-    pub fn get_natives<'a>(&'a self) -> &'a Option<File> {
+    pub fn get_natives(&self) -> &Option<File> {
         match &self.classifiers {
             Some(classifiers) => {
                 if cfg!(target_os = "linux") {

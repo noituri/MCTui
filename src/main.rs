@@ -8,13 +8,13 @@ use lazy_static::lazy_static;
 use platform_dirs::AppDirs;
 use std::fs::create_dir_all;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, atomic::AtomicBool};
 use structs::settings;
 use utils::*;
 
 lazy_static! {
     static ref SETTINGS: Mutex<settings::Settings> = Mutex::new(settings::Settings::new().unwrap());
-    static ref CONNECTION: Mutex<bool> = Mutex::new(false);
+    static ref CONNECTION: AtomicBool = AtomicBool::new(false);
 }
 
 #[tokio::main]

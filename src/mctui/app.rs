@@ -28,7 +28,7 @@ impl App {
         let settings = SETTINGS.lock().unwrap();
         let mut current_window = WindowType::Welcome;
 
-        if settings.auth.username != "" {
+        if !settings.auth.username.is_empty() {
             current_window = WindowType::Home;
         }
         Self {

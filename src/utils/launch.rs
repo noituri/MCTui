@@ -9,6 +9,7 @@ use std::io::Read;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::atomic::Ordering;
 
 pub async fn prepare_game(profile_id: &str, sender: Sender<String>) {
     let username = {
@@ -23,7 +24,7 @@ pub async fn prepare_game(profile_id: &str, sender: Sender<String>) {
 
     let profile = profile.unwrap();
 
-    if *crate::CONNECTION.lock().unwrap() {
+    if crate::CONNECTION.load(Ordering::Relaxed) {
         let versions_resp: versions::Versions =
             reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
 
@@ -50,7 +51,7 @@ pub async fn prepare_game(profile_id: &str, sender: Sender<String>) {
                 let download_chunks = download_futures.chunks(50);
                 let chunks_len = download_chunks.len();
                 for (i, chunk) in download_chunks.enumerate() {
-                    join_all(chunk.iter().map(|f| f.clone())).await;
+                    join_all(chunk.iter().cloned()).await;
 
                     sender
                         .send(format!("Downloaded {}/{}", i + 1, chunks_len))
@@ -103,7 +104,7 @@ pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
         match &lib.downloads.artifact {
             Some(artifact) => {
                 let artifact_path = artifact.path.to_owned().unwrap();
-                let file_name = artifact_path.split("/").last().unwrap();
+                let file_name = artifact_path.split('/').last().unwrap();
 
                 libs.push_str(format!("{}/{}/{}{}", path, artifact_path, file_name, sep).as_str());
             }
@@ -112,7 +113,7 @@ pub fn gen_libs_path(path: &str, profile: &str) -> Option<String> {
 
         if let Some(natives) = lib.downloads.get_natives() {
             let natives_path = natives.path.to_owned().unwrap();
-            let file_name = natives_path.split("/").last().unwrap();
+            let file_name = natives_path.split('/').last().unwrap();
 
             libs.push_str(format!("{}/{}/{}{}", path, natives_path, file_name, sep).as_str());
         }
@@ -142,7 +143,7 @@ pub async fn gen_run_cmd(
 
     let dot = std::env::var("DOT_MCTUI").unwrap();
 
-    let mut libs = gen_libs_path(format!("{}/libs", dot.to_owned()).as_str(), profile).unwrap();
+    let mut libs = gen_libs_path(format!("{}/libs", dot).as_str(), profile).unwrap();
     let mut assets = format!("{}/assets", dot);
     let mut game_dir = format!("{}/game", profile);
     let mut sep = ":";
@@ -157,7 +158,7 @@ pub async fn gen_run_cmd(
 
     create_dir_all(game_dir.to_owned()).unwrap();
 
-    let mut args = args.split(" ").map(|a| a.to_owned()).collect::<Vec<_>>();
+    let mut args = args.split(' ').map(|a| a.to_owned()).collect::<Vec<_>>();
 
     let additional_arguments = [
         "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump"

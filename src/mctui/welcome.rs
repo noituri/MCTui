@@ -38,7 +38,7 @@ impl TuiWidget for WelcomeWindow {
                 settings.auth.username = self.input.0.to_owned();
                 settings.save();
 
-                if settings.profiles.profiles.len() == 0 {
+                if settings.profiles.profiles.is_empty() {
                     return Some(WindowType::ProfileCreator(String::new()));
                 } else {
                     return Some(WindowType::Home);

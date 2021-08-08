@@ -42,15 +42,12 @@ impl TuiWidget for HomeWindow {
                 return result;
             }
         }
-        match key {
-            KeyCode::Tab => {
-                self.tab_index = match self.tab_index {
-                    0 => 1,
-                    1 => 0,
-                    _ => 0,
-                }
+        if let KeyCode::Tab = key {
+            self.tab_index = match self.tab_index {
+                0 => 1,
+                1 => 0,
+                _ => 0,
             }
-            _ => {}
         }
 
         None

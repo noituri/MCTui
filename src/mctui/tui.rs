@@ -45,15 +45,12 @@ pub async fn start_tui() -> Result<(), Box<dyn Error>> {
 }
 
 async fn handle_events(events: &Events, app: &mut App) -> Option<()> {
-    match events.next().unwrap() {
-        Event::Input(input) => {
-            if input == KeyCode::Char('q') {
-                return None;
-            }
-
-            app.handle_events(input).await;
+    if let Event::Input(input) = events.next().unwrap() {
+        if input == KeyCode::Char('q') {
+            return None;
         }
-        _ => {}
+
+        app.handle_events(input).await;
     }
 
     Some(())

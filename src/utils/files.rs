@@ -59,7 +59,7 @@ async fn verify_file_exists(
 ) {
     let path = Path::new(&file_path);
     let mut file_dir = file_path.to_string();
-    file_dir.truncate(file_path.rfind("/").unwrap());
+    file_dir.truncate(file_path.rfind('/').unwrap());
     {
         let mut td = to_download.lock().unwrap();
         if !path.exists() || path.is_dir() {
@@ -117,7 +117,7 @@ pub async fn verify_files(
         libs_resp.asset_index.url,
     ));
 
-    for (_, asset) in &assets_resp.objects {
+    for asset in assets_resp.objects.values() {
         let asset_path = format!("{}/assets/objects/{}", dot.to_owned(), &asset.hash[0..2]);
 
         verify_futures.push(verify_file_exists(

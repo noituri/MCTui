@@ -72,14 +72,11 @@ impl TuiWidget for BottomNav {
                             settings.profiles.selected.to_owned()
                         };
 
-                        match self.sender.to_owned() {
-                            Some(sender) => {
-                                tokio::spawn(async move {
-                                    crate::utils::launch::prepare_game(&selected, sender.clone())
-                                        .await;
-                                });
-                            }
-                            None => {}
+                        if let Some(sender) = self.sender.to_owned() {
+                            tokio::spawn(async move {
+                                crate::utils::launch::prepare_game(&selected, sender.clone())
+                                    .await;
+                            });
                         }
                     }
                     1 => {

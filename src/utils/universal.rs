@@ -1,6 +1,7 @@
 use crate::structs::settings::Profile;
 use crate::SETTINGS;
 use std::process::Command;
+use std::sync::atomic::Ordering;
 use uuid::Uuid;
 
 pub async fn start_checker() {
@@ -19,7 +20,7 @@ pub async fn start_checker() {
         .output()
         .unwrap();
 
-    *crate::CONNECTION.lock().unwrap() = output.status.success();
+    crate::CONNECTION.store(output.status.success(), Ordering::Relaxed);
 
     if settings.auth.online {
         // TODO Yggdrasil
@@ -70,7 +71,7 @@ pub fn create_profile(name: String, version: String, asset: String, args: String
         args,
     });
 
-    if settings.profiles.selected == "" {
+    if settings.profiles.selected.is_empty() {
         settings.profiles.selected = id;
     }
 

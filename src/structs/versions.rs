@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -18,7 +19,7 @@ pub struct Version {
     #[serde(rename = "type")]
     pub v_type: String,
     pub url: String,
-    pub time: String,
+    pub time: DateTime<Utc>,
     #[serde(rename = "releaseTime")]
-    pub release_time: String,
+    pub release_date: DateTime<Utc>,
 }

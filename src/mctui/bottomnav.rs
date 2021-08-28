@@ -1,4 +1,3 @@
-use crate::SETTINGS;
 use async_trait::async_trait;
 use crossbeam_channel::Sender;
 use crossterm::event::KeyCode;
@@ -10,12 +9,16 @@ use tui::{
     widgets::{Block, Borders, List, ListItem, ListState},
 };
 
+use crate::utils::universal::get_profile;
+use crate::SettingsPtr;
+
 use super::app::{TuiWidget, WindowType};
 
 pub struct BottomNav {
     pub items: Items,
     pub sender: Option<Sender<String>>,
     profile_selector: bool,
+    settings: SettingsPtr,
 }
 
 pub struct Items {
@@ -24,7 +27,7 @@ pub struct Items {
 }
 
 impl BottomNav {
-    pub fn new() -> Self {
+    pub fn new(settings: SettingsPtr) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
         Self {
@@ -37,6 +40,7 @@ impl BottomNav {
             },
             sender: None,
             profile_selector: false,
+            settings,
         }
     }
 }
@@ -49,7 +53,7 @@ impl TuiWidget for BottomNav {
             KeyCode::Enter => {
                 if self.profile_selector {
                     if selected_item != 0 {
-                        let mut settings = crate::SETTINGS.lock().unwrap();
+                        let mut settings = self.settings.lock().unwrap();
                         settings.profiles.selected =
                             settings.profiles.profiles[selected_item - 1].id.to_owned();
 
@@ -67,20 +71,26 @@ impl TuiWidget for BottomNav {
 
                 match selected_item {
                     0 => {
-                        let selected = {
-                            let settings = crate::SETTINGS.lock().unwrap();
-                            settings.profiles.selected.to_owned()
-                        };
+                        let settings = self.settings.lock().unwrap();
+                        let id = settings.profiles.selected.clone();
+                        let username = settings.auth.username.clone();
+                        drop(settings);
+
+                        let profile = get_profile(&id, self.settings.clone()).unwrap();
 
                         if let Some(sender) = self.sender.to_owned() {
                             tokio::spawn(async move {
-                                crate::utils::launch::prepare_game(&selected, sender.clone())
-                                    .await;
+                                crate::utils::launch::prepare_game(
+                                    &profile,
+                                    &username,
+                                    sender.clone(),
+                                )
+                                .await;
                             });
                         }
                     }
                     1 => {
-                        let settings = SETTINGS.lock().unwrap();
+                        let settings = self.settings.lock().unwrap();
                         let mut temp_vec = vec!["<--".to_string()];
                         for p in settings.profiles.profiles.iter() {
                             temp_vec.push(p.name.to_owned());
@@ -133,11 +143,12 @@ impl TuiWidget for BottomNav {
 
         {
             if !self.profile_selector {
-                let settings = SETTINGS.lock().unwrap();
+                let settings = self.settings.lock().unwrap();
                 let selected_profile = settings.profiles.selected.to_owned();
-                std::mem::drop(settings);
+                drop(settings);
 
-                let profile = crate::universal::get_profile(&selected_profile);
+                let profile =
+                    crate::universal::get_profile(&selected_profile, self.settings.clone());
                 match profile {
                     Some(p) => {
                         self.items.middle[1] = self.items.middle[1].replace("${profile}", &p.name)

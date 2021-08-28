@@ -1,5 +1,6 @@
 use crate::constants::*;
 use crate::structs::libraries::Libraries;
+use crate::structs::settings::Profile;
 use crate::structs::*;
 use crate::utils::files;
 use crossbeam_channel::Sender;
@@ -10,7 +11,6 @@ use std::io::Read;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::atomic::Ordering;
 
 const LIB_SEPARATOR: &str = if cfg!(target_os = "windows") {
     ";"
@@ -18,58 +18,41 @@ const LIB_SEPARATOR: &str = if cfg!(target_os = "windows") {
     ":"
 };
 
-pub async fn prepare_game(profile_id: &str, sender: Sender<String>) {
-    let username = {
-        let settings = crate::SETTINGS.lock().unwrap();
-        settings.auth.username.to_owned()
-    };
+pub async fn prepare_game(profile: &Profile, username: &str, sender: Sender<String>) {
+    let versions_resp: versions::Versions =
+        reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
 
-    let profile = crate::universal::get_profile(profile_id);
-    if profile.is_none() {
-        return;
-    }
+    for v in versions_resp.versions {
+        if v.id == profile.version {
+            sender.send("Verifying files".to_string()).unwrap();
+            let to_download = files::verify_files(
+                reqwest::get(v.url.as_str())
+                    .await
+                    .unwrap()
+                    .json()
+                    .await
+                    .unwrap(),
+                &profile.name,
+            )
+            .await;
 
-    let profile = profile.unwrap();
-
-    if crate::CONNECTION.load(Ordering::Relaxed) {
-        let versions_resp: versions::Versions =
-            reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
-
-        for v in versions_resp.versions {
-            if v.id == profile.version {
-                sender.send("Verifying files".to_string()).unwrap();
-                let to_download = files::verify_files(
-                    reqwest::get(v.url.as_str())
-                        .await
-                        .unwrap()
-                        .json()
-                        .await
-                        .unwrap(),
-                    &profile.name,
-                )
-                .await;
-
-                sender.send("Downloading files".to_string()).unwrap();
-                let mut download_futures = Vec::new();
-                for (k, v) in to_download.iter() {
-                    download_futures.push(files::download_file(k.to_string(), v).shared());
-                }
-
-                let download_chunks = download_futures.chunks(50);
-                let chunks_len = download_chunks.len();
-                for (i, chunk) in download_chunks.enumerate() {
-                    join_all(chunk.iter().cloned()).await;
-
-                    sender
-                        .send(format!("Downloaded {}/{}", i + 1, chunks_len))
-                        .unwrap();
-                }
-                sender.send("All files downloaded".to_string()).unwrap();
+            sender.send("Downloading files".to_string()).unwrap();
+            let mut download_futures = Vec::new();
+            for (k, v) in to_download.iter() {
+                download_futures.push(files::download_file(k.to_string(), v).shared());
             }
+
+            let download_chunks = download_futures.chunks(50);
+            let chunks_len = download_chunks.len();
+            for (i, chunk) in download_chunks.enumerate() {
+                join_all(chunk.iter().cloned()).await;
+
+                sender
+                    .send(format!("Downloaded {}/{}", i + 1, chunks_len))
+                    .unwrap();
+            }
+            sender.send("All files downloaded".to_string()).unwrap();
         }
-    } else {
-        //TODO should verify files but not download them
-        unimplemented!();
     }
 
     gen_run_cmd(

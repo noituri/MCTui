@@ -38,7 +38,7 @@ pub struct Profiles {
     pub profiles: Vec<Profile>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Profile {
     pub id: String,
     pub name: String,

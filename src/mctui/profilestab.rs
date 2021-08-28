@@ -1,4 +1,5 @@
-use crate::{utils::universal::delete_profile, SETTINGS};
+use crate::utils::universal::delete_profile;
+use crate::SettingsPtr;
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::layout::{Constraint, Direction, Layout, Rect};
@@ -15,13 +16,15 @@ use super::app::{TuiWidget, WindowType};
 pub struct ProfilesTab {
     profiles_len: usize,
     selected_index: usize,
+    settings: SettingsPtr,
 }
 
 impl ProfilesTab {
-    pub fn new() -> Self {
+    pub fn new(settings: SettingsPtr) -> Self {
         Self {
             profiles_len: 0,
             selected_index: 0,
+            settings,
         }
     }
 }
@@ -31,7 +34,7 @@ impl TuiWidget for ProfilesTab {
     async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         match key {
             KeyCode::Enter => {
-                let settings = SETTINGS.lock().unwrap();
+                let settings = self.settings.lock().unwrap();
                 return Some(WindowType::ProfileCreator(
                     settings.profiles.profiles[self.selected_index]
                         .id
@@ -40,13 +43,11 @@ impl TuiWidget for ProfilesTab {
             }
             KeyCode::Char('n') => return Some(WindowType::ProfileCreator(String::new())),
             KeyCode::Char('d') => {
-                let settings = SETTINGS.lock().unwrap();
-                let id = settings.profiles.profiles[self.selected_index]
-                    .id
-                    .to_owned();
-                std::mem::drop(settings);
+                let settings = self.settings.lock().unwrap();
+                let id = settings.profiles.profiles[self.selected_index].id.clone();
+                drop(settings);
 
-                delete_profile(id);
+                delete_profile(id, self.settings.clone());
             }
             KeyCode::Down => {
                 if self.selected_index + 1 != self.profiles_len {
@@ -107,7 +108,7 @@ impl TuiWidget for ProfilesTab {
         frame.render_widget(block, layout[1]);
 
         let header = Row::new(vec!["Name", "Version"]);
-        let settings = SETTINGS.lock().unwrap();
+        let settings = self.settings.lock().unwrap();
         self.profiles_len = settings.profiles.profiles.len();
 
         let selected_style = Style::default().fg(Color::Cyan);

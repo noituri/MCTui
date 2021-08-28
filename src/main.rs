@@ -4,18 +4,14 @@ mod structs;
 mod utils;
 
 use crate::mctui::tui::start_tui;
-use lazy_static::lazy_static;
 use platform_dirs::AppDirs;
 use std::fs::create_dir_all;
 use std::path::Path;
-use std::sync::{Mutex, atomic::AtomicBool};
-use structs::settings;
+use std::sync::{Arc, Mutex};
+use structs::settings::Settings;
 use utils::*;
 
-lazy_static! {
-    static ref SETTINGS: Mutex<settings::Settings> = Mutex::new(settings::Settings::new().unwrap());
-    static ref CONNECTION: AtomicBool = AtomicBool::new(false);
-}
+type SettingsPtr = Arc<Mutex<Settings>>;
 
 #[tokio::main]
 async fn main() {
@@ -32,8 +28,11 @@ async fn main() {
         Err(_) => std::env::set_var("DOT_MCTUI", dot.to_owned()),
     }
 
+    let settings = Settings::new().expect("Unable to initialize the application settings");
+    let settings_ptr = Arc::new(Mutex::new(settings));
+
     create_dir_all(dot.to_owned()).unwrap();
     std::env::set_current_dir(Path::new(&dot)).unwrap();
     universal::start_checker().await;
-    start_tui().await.unwrap();
+    start_tui(settings_ptr).await.unwrap();
 }

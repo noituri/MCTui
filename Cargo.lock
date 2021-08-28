@@ -546,7 +546,6 @@ dependencies = [
  "crossbeam-channel",
  "crossterm",
  "futures",
- "lazy_static",
  "platform-dirs",
  "reqwest",
  "serde",

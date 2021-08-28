@@ -17,6 +17,26 @@ pub struct Settings {
 }
 
 impl Settings {
+    pub fn new(app_dirs: AppDirs) -> Result<Self, Box<dyn Error>> {
+        let settings_path = app_dirs.data_dir.join(FILE_NAME);
+
+        let mut settings = match settings_path.exists() {
+            true => {
+                let mut file = File::open(&settings_path)?;
+                let mut contents = String::new();
+                file.read_to_string(&mut contents)?;
+
+                serde_json::from_str(&contents)?
+            }
+            false => Settings::default(),
+        };
+
+        // FIXME: Temporary solution until Settings refactoring
+        settings.app_dirs = Some(app_dirs);
+
+        Ok(settings)
+    }
+
     pub fn save(&self) {
         // FIXME: Option<T> Temporary solution until Settings refactoring
         let settings_path = self.app_dirs.as_ref().unwrap().data_dir.join(FILE_NAME);
@@ -64,27 +84,4 @@ pub struct Profile {
     pub version: String,
     pub asset: String,
     pub args: String,
-}
-
-impl Settings {
-    pub fn new(app_dirs: AppDirs) -> Result<Self, Box<dyn Error>> {
-        let settings_path = app_dirs.data_dir.join(FILE_NAME);
-
-        let mut settings = match settings_path.exists() {
-            true => {
-                let mut file = File::open(&settings_path)?;
-                let mut contents = String::new();
-                file.read_to_string(&mut contents)?;
-
-                serde_json::from_str(&contents)?
-
-            },
-            false => Settings::default(),
-        };
-
-        // FIXME: Temporary solution until Settings refactoring
-        settings.app_dirs = Some(app_dirs);
-
-        Ok(settings)
-    }
 }

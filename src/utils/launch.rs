@@ -171,6 +171,7 @@ pub async fn gen_run_cmd(
 
     let mut cmd = Command::new("java")
         .args(args)
+        .current_dir(data_dir)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()

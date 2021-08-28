@@ -4,7 +4,7 @@ use crate::structs::settings::Profile;
 use crate::structs::*;
 use crate::utils::files;
 use crossbeam_channel::Sender;
-use futures::{future::join_all, FutureExt};
+use futures::{stream, StreamExt};
 use reqwest;
 use std::fs::{create_dir_all, File};
 use std::io::Read;
@@ -18,7 +18,12 @@ const LIB_SEPARATOR: &str = if cfg!(target_os = "windows") {
     ":"
 };
 
-pub async fn prepare_game(data_dir: &Path, profile: &Profile, username: &str, sender: Sender<String>) {
+pub async fn prepare_game(
+    data_dir: &Path,
+    profile: &Profile,
+    username: &str,
+    sender: Sender<String>,
+) {
     let versions_resp: versions::Versions =
         reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
 
@@ -38,31 +43,32 @@ pub async fn prepare_game(data_dir: &Path, profile: &Profile, username: &str, se
             .await;
 
             sender.send("Downloading files".to_string()).unwrap();
-            let mut download_futures = Vec::new();
-            for (k, v) in to_download.iter() {
-                download_futures.push(files::download_file(k.to_string(), v).shared());
-            }
 
-            let download_chunks = download_futures.chunks(50);
-            let chunks_len = download_chunks.len();
-            for (i, chunk) in download_chunks.enumerate() {
-                join_all(chunk.iter().cloned()).await;
+            let total_to_dl = &to_download.len();
+            let mut total_dl = 0;
+            let stream_sender = &sender.clone();
 
-                sender
-                    .send(format!("Downloaded {}/{}", i + 1, chunks_len))
-                    .unwrap();
-            }
+            stream::iter(to_download)
+                .map(|(k, v)| async move {
+                    files::download_file(k.to_string(), &v).await;
+                })
+                .buffer_unordered(5)
+                .map(|_| {
+                    total_dl += 1;
+                    stream_sender
+                        .send(format!("Downloaded: {}%", total_dl * 100 / total_to_dl))
+                        .unwrap();
+                })
+                .collect::<Vec<_>>()
+                .await;
+
             sender.send("All files downloaded".to_string()).unwrap();
         }
     }
 
     gen_run_cmd(
         &data_dir,
-        &format!(
-            "{}/profiles/{}",
-            data_dir.to_string_lossy(),
-            profile.name
-        ),
+        &format!("{}/profiles/{}", data_dir.to_string_lossy(), profile.name),
         &username,
         &profile.version,
         &profile.asset,

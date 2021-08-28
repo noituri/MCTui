@@ -1,22 +1,28 @@
+use platform_dirs::AppDirs;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::Path;
+
+const FILE_NAME: &str = "mctui.json";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub auth: Auth,
     pub profiles: Profiles,
+
+    /// FIXME: Temporary solution until Settings refactoring
+    #[serde(skip)]
+    pub app_dirs: Option<AppDirs>,
 }
 
 impl Settings {
     pub fn save(&self) {
+        // FIXME: Option<T> Temporary solution until Settings refactoring
+        let settings_path = self.app_dirs.as_ref().unwrap().data_dir.join(FILE_NAME);
+
         serde_json::to_writer_pretty(
-            &File::create(format!(
-                "{}/mctui.json",
-                std::env::var("DOT_MCTUI").unwrap()
-            ))
+            &File::create(settings_path)
             .unwrap(),
             self,
         )
@@ -48,10 +54,10 @@ pub struct Profile {
 }
 
 impl Settings {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
-        let settings_path = format!("{}/mctui.json", std::env::var("DOT_MCTUI").unwrap());
+    pub fn new(app_dirs: AppDirs) -> Result<Self, Box<dyn Error>> {
+        let settings_path = app_dirs.data_dir.join(FILE_NAME);
 
-        if !Path::new(&settings_path).exists() {
+        if !&settings_path.exists() {
             let file_bytes = include_bytes!("../../assets/defaultconfig.json");
             let mut file = std::fs::File::create(&settings_path)?;
             file.write_all(file_bytes)?;
@@ -62,6 +68,10 @@ impl Settings {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        Ok(serde_json::from_str(&contents).unwrap())
+        let mut settings: Settings = serde_json::from_str(&contents)?;
+        // FIXME: Temporary solution until Settings refactoring
+        settings.app_dirs = Some(app_dirs);
+
+        Ok(settings)
     }
 }

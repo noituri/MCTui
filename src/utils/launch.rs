@@ -18,7 +18,7 @@ const LIB_SEPARATOR: &str = if cfg!(target_os = "windows") {
     ":"
 };
 
-pub async fn prepare_game(profile: &Profile, username: &str, sender: Sender<String>) {
+pub async fn prepare_game(data_dir: &Path, profile: &Profile, username: &str, sender: Sender<String>) {
     let versions_resp: versions::Versions =
         reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
 
@@ -26,6 +26,7 @@ pub async fn prepare_game(profile: &Profile, username: &str, sender: Sender<Stri
         if v.id == profile.version {
             sender.send("Verifying files".to_string()).unwrap();
             let to_download = files::verify_files(
+                &data_dir,
                 reqwest::get(v.url.as_str())
                     .await
                     .unwrap()
@@ -56,9 +57,10 @@ pub async fn prepare_game(profile: &Profile, username: &str, sender: Sender<Stri
     }
 
     gen_run_cmd(
+        &data_dir,
         &format!(
             "{}/profiles/{}",
-            std::env::var("DOT_MCTUI").unwrap(),
+            data_dir.to_string_lossy(),
             profile.name
         ),
         &username,
@@ -112,6 +114,7 @@ fn list_libs_path(path: &str, profile: &str) -> Option<Vec<PathBuf>> {
 }
 
 pub async fn gen_run_cmd(
+    data_dir: &Path,
     profile: &str,
     // natives: &str,
     username: &str,
@@ -124,7 +127,7 @@ pub async fn gen_run_cmd(
         .send("Launching Minecraft Instance...".to_string())
         .unwrap();
 
-    let dot = std::env::var("DOT_MCTUI").unwrap();
+    let dot = data_dir.to_string_lossy().to_string();
     let base_dir = Path::new(&dot);
     let profile_dir = Path::new(&profile);
 

@@ -28,7 +28,7 @@ impl HomeWindow {
             tab_index: 0,
             logger: LoggerFrame::new(),
             bottom_nav: BottomNav::new(settings.clone()),
-            profiles_tab: ProfilesTab::new(settings.clone()),
+            profiles_tab: ProfilesTab::new(settings),
         }
     }
 }

@@ -31,7 +31,7 @@ pub async fn prepare_game(
         if v.id == profile.version {
             sender.send("Verifying files".to_string()).unwrap();
             let to_download = files::verify_files(
-                &data_dir,
+                data_dir,
                 reqwest::get(v.url.as_str())
                     .await
                     .unwrap()
@@ -67,9 +67,9 @@ pub async fn prepare_game(
     }
 
     gen_run_cmd(
-        &data_dir,
+        data_dir,
         &format!("{}/profiles/{}", data_dir.to_string_lossy(), profile.name),
-        &username,
+        username,
         &profile.version,
         &profile.asset,
         &profile.args,

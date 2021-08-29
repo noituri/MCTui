@@ -47,15 +47,13 @@ pub async fn start_tui(settings: SettingsPtr) -> Result<(), Box<dyn Error>> {
 
 // Returns `true` if the app should be closed
 async fn handle_events(events: &Events, app: &mut App) -> bool {
-    if let Ok(event) = events.next() {
-        if let Event::Input(input) = event {
-            // FIXME: This should be ignored when input box is being used
-            if input == KeyCode::Char('q') {
-                return true;
-            }
-    
-            app.handle_events(input).await;
+    if let Ok(Event::Input(input)) = events.next() {
+        // FIXME: This should be ignored when input box is being used
+        if input == KeyCode::Char('q') {
+            return true;
         }
+
+        app.handle_events(input).await;
     }
 
     false

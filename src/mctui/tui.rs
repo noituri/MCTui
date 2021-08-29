@@ -31,7 +31,7 @@ pub async fn start_tui(settings: SettingsPtr) -> Result<(), Box<dyn Error>> {
             app.render(&mut f);
         })?;
 
-        if handle_events(&events, &mut app).await.is_none() {
+        if handle_events(&events, &mut app).await {
             disable_raw_mode()?;
             execute!(
                 terminal.backend_mut(),
@@ -45,14 +45,18 @@ pub async fn start_tui(settings: SettingsPtr) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn handle_events(events: &Events, app: &mut App) -> Option<()> {
-    if let Event::Input(input) = events.next().unwrap() {
-        if input == KeyCode::Char('q') {
-            return None;
+// Returns `true` if the app should be closed
+async fn handle_events(events: &Events, app: &mut App) -> bool {
+    if let Ok(event) = events.next() {
+        if let Event::Input(input) = event {
+            // FIXME: This should be ignored when input box is being used
+            if input == KeyCode::Char('q') {
+                return true;
+            }
+    
+            app.handle_events(input).await;
         }
-
-        app.handle_events(input).await;
     }
 
-    Some(())
+    false
 }

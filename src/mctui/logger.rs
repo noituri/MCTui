@@ -35,11 +35,11 @@ impl TuiWidget for LoggerFrame {
         let rect = rect.unwrap();
 
         let receiver = self.receiver.as_mut().unwrap();
-        for log in receiver.try_recv() {
+        while let Ok(log) = receiver.try_recv() {
             self.output.push(log);
         }
 
-        if self.output.len() as u16 >= rect.height - 2 {
+        while self.output.len() as u16 >= rect.height - 2 {
             self.output.remove(0);
         }
 

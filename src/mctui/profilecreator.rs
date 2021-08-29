@@ -1,6 +1,7 @@
 use super::app::{TuiWidget, WindowType};
 use crate::structs::libraries::Libraries;
 use crate::structs::versions;
+use crate::SettingsPtr;
 use crate::{
     constants::VERSIONS,
     utils::universal::{create_profile, edit_profile},
@@ -22,10 +23,11 @@ pub struct ProfileCreatorWindow {
     pub id: Option<String>,
     pub versions: Vec<versions::Version>,
     list_state: ListState,
+    settings: SettingsPtr,
 }
 
 impl ProfileCreatorWindow {
-    pub async fn new() -> Self {
+    pub async fn new(settings: SettingsPtr) -> Self {
         let versions_resp: versions::Versions =
             reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
         let mut list_state = ListState::default();
@@ -36,6 +38,7 @@ impl ProfileCreatorWindow {
             input: String::new(),
             id: None,
             versions: versions_resp.versions,
+            settings,
         }
     }
 }
@@ -57,7 +60,12 @@ impl TuiWidget for ProfileCreatorWindow {
 
                 match self.id.to_owned() {
                     Some(id) => {
-                        edit_profile(id, self.input.to_owned(), selected_version.id.to_owned());
+                        edit_profile(
+                            id,
+                            self.input.to_owned(),
+                            selected_version.id.to_owned(),
+                            self.settings.clone(),
+                        );
                     }
                     None => {
                         create_profile(
@@ -65,6 +73,7 @@ impl TuiWidget for ProfileCreatorWindow {
                             selected_version.id.to_owned(),
                             assets_resp.asset_index.id,
                             "-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M".to_string(),
+                            self.settings.clone()
                         );
                     }
                 }

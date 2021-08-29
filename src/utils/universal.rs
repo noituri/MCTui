@@ -1,51 +1,41 @@
 use crate::structs::settings::Profile;
-use crate::SETTINGS;
+use crate::SettingsPtr;
 use std::process::Command;
-use std::sync::atomic::Ordering;
 use uuid::Uuid;
 
 pub async fn start_checker() {
-    let settings = SETTINGS.lock().unwrap();
-
     let arg = if cfg!(target_os = "windows") {
         "-n"
     } else {
         "-c"
     };
 
-    let output = Command::new("ping")
+    let _output = Command::new("ping")
         .arg(arg)
         .arg("1")
         .arg("8.8.8.8")
         .output()
         .unwrap();
-
-    crate::CONNECTION.store(output.status.success(), Ordering::Relaxed);
-
-    if settings.auth.online {
-        // TODO Yggdrasil
-        panic!("implement me");
-    }
 }
 
-pub fn get_profile(id: &str) -> Option<Profile> {
-    for p in SETTINGS.lock().unwrap().profiles.profiles.iter() {
-        if p.id == id {
-            return Some(Profile {
-                id: p.id.to_owned(),
-                name: p.name.to_owned(),
-                version: p.version.to_owned(),
-                asset: p.asset.to_owned(),
-                args: p.args.to_owned(),
-            });
-        }
-    }
-
-    None
+pub fn get_profile(id: &str, settings: SettingsPtr) -> Option<Profile> {
+    let settings = settings.lock().unwrap();
+    settings
+        .profiles
+        .profiles
+        .iter()
+        .find(|x| x.id == id)
+        .map(Clone::clone)
 }
 
-pub fn create_profile(name: String, version: String, asset: String, args: String) {
-    let mut settings = SETTINGS.lock().unwrap();
+pub fn create_profile(
+    name: String,
+    version: String,
+    asset: String,
+    args: String,
+    settings: SettingsPtr,
+) {
+    let mut settings = settings.lock().unwrap();
 
     let mut id = Uuid::new_v4().to_string();
 
@@ -78,8 +68,8 @@ pub fn create_profile(name: String, version: String, asset: String, args: String
     settings.save();
 }
 
-pub fn edit_profile(id: String, name: String, version: String) {
-    let mut settings = SETTINGS.lock().unwrap();
+pub fn edit_profile(id: String, name: String, version: String, settings: SettingsPtr) {
+    let mut settings = settings.lock().unwrap();
 
     for p in settings.profiles.profiles.iter_mut() {
         if p.id == id {
@@ -91,8 +81,8 @@ pub fn edit_profile(id: String, name: String, version: String) {
     settings.save();
 }
 
-pub fn delete_profile(id: String) {
-    let mut settings = SETTINGS.lock().unwrap();
+pub fn delete_profile(id: String, settings: SettingsPtr) {
+    let mut settings = settings.lock().unwrap();
 
     let index = settings
         .profiles

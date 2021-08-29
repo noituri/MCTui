@@ -1,5 +1,6 @@
 use crate::mctui::app::App;
 use crate::mctui::events::{Event, Events};
+use crate::SettingsPtr;
 use crossbeam_channel::unbounded;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyCode},
@@ -9,7 +10,7 @@ use crossterm::{
 use std::error::Error;
 use tui::{backend::CrosstermBackend, Terminal};
 
-pub async fn start_tui() -> Result<(), Box<dyn Error>> {
+pub async fn start_tui(settings: SettingsPtr) -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -19,7 +20,7 @@ pub async fn start_tui() -> Result<(), Box<dyn Error>> {
     terminal.hide_cursor()?;
     terminal.clear()?;
 
-    let mut app = App::new().await;
+    let mut app = App::new(settings.clone()).await;
 
     let (s, r) = unbounded();
     app.windows.home.bottom_nav.sender = Some(s);

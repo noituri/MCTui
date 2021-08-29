@@ -1,26 +1,65 @@
+use platform_dirs::AppDirs;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::File;
-use std::io::{Read, Write};
-use std::path::Path;
+use std::io::Read;
+
+const FILE_NAME: &str = "mctui.json";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub auth: Auth,
     pub profiles: Profiles,
+
+    /// FIXME: Temporary solution until Settings refactoring
+    #[serde(skip)]
+    pub app_dirs: Option<AppDirs>,
 }
 
 impl Settings {
+    pub fn new(app_dirs: AppDirs) -> Result<Self, Box<dyn Error>> {
+        let settings_path = app_dirs.data_dir.join(FILE_NAME);
+
+        let mut settings = match settings_path.exists() {
+            true => {
+                let mut file = File::open(&settings_path)?;
+                let mut contents = String::new();
+                file.read_to_string(&mut contents)?;
+
+                serde_json::from_str(&contents)?
+            }
+            false => Settings::default(),
+        };
+
+        // FIXME: Temporary solution until Settings refactoring
+        settings.app_dirs = Some(app_dirs);
+
+        Ok(settings)
+    }
+
     pub fn save(&self) {
-        serde_json::to_writer_pretty(
-            &File::create(format!(
-                "{}/mctui.json",
-                std::env::var("DOT_MCTUI").unwrap()
-            ))
-            .unwrap(),
-            self,
-        )
-        .unwrap();
+        // FIXME: Option<T> Temporary solution until Settings refactoring
+        let settings_path = self.app_dirs.as_ref().unwrap().data_dir.join(FILE_NAME);
+
+        serde_json::to_writer_pretty(&File::create(settings_path).unwrap(), self).unwrap();
+    }
+}
+
+impl Default for Settings {
+    fn default() -> Settings {
+        Settings {
+            auth: Auth {
+                username: "".to_string(),
+                access_token: "".to_string(),
+                client_token: "".to_string(),
+                online: false,
+            },
+            profiles: Profiles {
+                selected: "".to_string(),
+                profiles: Vec::new(),
+            },
+            app_dirs: None,
+        }
     }
 }
 
@@ -38,30 +77,11 @@ pub struct Profiles {
     pub profiles: Vec<Profile>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Profile {
     pub id: String,
     pub name: String,
     pub version: String,
     pub asset: String,
     pub args: String,
-}
-
-impl Settings {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
-        let settings_path = format!("{}/mctui.json", std::env::var("DOT_MCTUI").unwrap());
-
-        if !Path::new(&settings_path).exists() {
-            let file_bytes = include_bytes!("../../assets/defaultconfig.json");
-            let mut file = std::fs::File::create(&settings_path)?;
-            file.write_all(file_bytes)?;
-            file.flush().unwrap();
-        }
-
-        let mut file = File::open(&settings_path)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-
-        Ok(serde_json::from_str(&contents).unwrap())
-    }
 }

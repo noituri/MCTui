@@ -1,6 +1,7 @@
+use crate::SettingsPtr;
+
 use super::app::TuiWidget;
 use super::app::WindowType;
-use crate::SETTINGS;
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::layout::{Constraint, Direction, Layout, Rect};
@@ -18,13 +19,15 @@ pub enum Selected {
 pub struct WelcomeWindow {
     pub input: (String, String),
     pub selected: Selected,
+    settings: SettingsPtr,
 }
 
 impl WelcomeWindow {
-    pub fn new() -> Self {
+    pub fn new(settings: SettingsPtr) -> Self {
         Self {
             input: (String::new(), String::new()),
             selected: Selected::Username,
+            settings,
         }
     }
 }
@@ -34,7 +37,7 @@ impl TuiWidget for WelcomeWindow {
     async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         match key {
             KeyCode::Enter => {
-                let mut settings = SETTINGS.lock().unwrap();
+                let mut settings = self.settings.lock().unwrap();
                 settings.auth.username = self.input.0.to_owned();
                 settings.save();
 

@@ -1,5 +1,6 @@
+use crate::SettingsPtr;
+
 use super::{home::HomeWindow, profilecreator::ProfileCreatorWindow, welcome::WelcomeWindow};
-use crate::SETTINGS;
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::backend::Backend;
@@ -24,19 +25,18 @@ pub struct TuiWindows {
 }
 
 impl App {
-    pub async fn new() -> Self {
-        let settings = SETTINGS.lock().unwrap();
+    pub async fn new(settings: SettingsPtr) -> Self {
         let mut current_window = WindowType::Welcome;
 
-        if !settings.auth.username.is_empty() {
+        if !settings.lock().unwrap().auth.username.is_empty() {
             current_window = WindowType::Home;
         }
         Self {
             current_window,
             windows: TuiWindows {
-                welcome: WelcomeWindow::new(),
-                profile_creator: ProfileCreatorWindow::new().await,
-                home: HomeWindow::new(),
+                welcome: WelcomeWindow::new(settings.clone()),
+                profile_creator: ProfileCreatorWindow::new(settings.clone()).await,
+                home: HomeWindow::new(settings.clone()),
             },
         }
     }

@@ -82,10 +82,11 @@ async fn verify_file_exists(
 }
 
 pub async fn verify_files(
+    data_dir: &Path,
     libs_resp: libraries::Libraries,
     profile: &str,
 ) -> HashMap<String, String> {
-    let dot = std::env::var("DOT_MCTUI").unwrap();
+    let dot = data_dir.to_string_lossy().to_string();
 
     create_dir_all(format!("{}/profiles/{}", dot.to_owned(), profile)).unwrap();
     serde_json::to_writer_pretty(

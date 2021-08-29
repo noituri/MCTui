@@ -6,6 +6,8 @@ use tui::widgets::{Block, Borders, Tabs};
 use tui::Frame;
 use tui::{backend::Backend, text::Spans};
 
+use crate::SettingsPtr;
+
 use super::{
     app::{TuiWidget, WindowType},
     bottomnav::BottomNav,
@@ -21,12 +23,12 @@ pub struct HomeWindow {
 }
 
 impl HomeWindow {
-    pub fn new() -> Self {
+    pub fn new(settings: SettingsPtr) -> Self {
         Self {
             tab_index: 0,
             logger: LoggerFrame::new(),
-            bottom_nav: BottomNav::new(),
-            profiles_tab: ProfilesTab::new(),
+            bottom_nav: BottomNav::new(settings.clone()),
+            profiles_tab: ProfilesTab::new(settings.clone()),
         }
     }
 }

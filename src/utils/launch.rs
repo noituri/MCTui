@@ -2,6 +2,7 @@ use crate::launcher::authentication::Authentication;
 use crate::launcher::installer;
 use crate::launcher::profile::Profile;
 use crate::structs::libraries::Libraries;
+use crate::structs::versions::Version;
 use crate::utils::files;
 use crossbeam_channel::Sender;
 use futures::{stream, StreamExt};
@@ -34,7 +35,7 @@ pub async fn prepare_game(
     let assets = installer::get_assets(&libs).await.unwrap();
 
     sender.send("Verifying files".to_string()).unwrap();
-    let to_download = files::verify_files(data_dir, &libs, &assets, &profile.name).await;
+    let to_download = files::verify_files(data_dir, version, &libs, &assets).await;
 
     if !to_download.is_empty() {
         sender.send("Downloading files".to_string()).unwrap();
@@ -69,9 +70,8 @@ pub async fn prepare_game(
 
     gen_run_cmd(
         data_dir,
-        &format!("{}/profiles/{}", data_dir.to_string_lossy(), profile.name),
         authentication,
-        &profile.version,
+        version,
         &profile.asset,
         &profile.args,
         &libs,
@@ -81,31 +81,20 @@ pub async fn prepare_game(
 }
 
 // Lists all the librairies needed to launch the game
-fn list_libs_path(path: &str, libs: &Libraries) -> Option<Vec<PathBuf>> {
-    let libs_path = Path::new(path);
-
-    if !libs_path.exists() || libs_path.is_file() {
+fn list_libs_path(libs_dir: &Path, libs: &Libraries) -> Option<Vec<PathBuf>> {
+    if !libs_dir.is_dir() {
         return None;
     }
 
     let mut libs_paths = Vec::new();
 
     for lib in libs.libraries.iter() {
-        match &lib.downloads.artifact {
-            Some(artifact) => {
-                let artifact_path = artifact.path.to_owned().unwrap();
-                let file_name = &artifact_path.split('/').last().unwrap();
-
-                libs_paths.push(libs_path.join(&artifact_path).join(file_name));
-            }
-            None => {}
+        if let Some(artifact) = &lib.downloads.artifact {
+            libs_paths.push(libs_dir.join(&artifact.path.clone().unwrap()));
         }
 
         if let Some(natives) = lib.downloads.get_natives() {
-            let natives_path = natives.path.to_owned().unwrap();
-            let file_name = &natives_path.split('/').last().unwrap();
-
-            libs_paths.push(libs_path.join(&natives_path).join(file_name));
+            libs_paths.push(libs_dir.join(&natives.path.clone().unwrap()));
         }
     }
 
@@ -114,10 +103,8 @@ fn list_libs_path(path: &str, libs: &Libraries) -> Option<Vec<PathBuf>> {
 
 pub async fn gen_run_cmd(
     data_dir: &Path,
-    profile: &str,
-    // natives: &str,
     authntication: &Authentication,
-    version: &str,
+    version: &Version,
     asset_index: &str,
     args: &str,
     libs: &Libraries,
@@ -129,13 +116,13 @@ pub async fn gen_run_cmd(
 
     let dot = data_dir.to_string_lossy().to_string();
     let base_dir = Path::new(&dot);
-    let profile_dir = Path::new(&profile);
+    let version_dir = data_dir.join("versions").join(version.id.clone());
 
-    let mut libs = list_libs_path(format!("{}/libs", dot).as_str(), libs).unwrap();
-    libs.push(profile_dir.join("client.jar"));
+    let mut libs = list_libs_path(data_dir.join("libraries").as_path(), libs).unwrap();
+    libs.push(version_dir.join("client.jar"));
 
     let assets = base_dir.join("assets");
-    let game_dir = profile_dir.join("game");
+    let game_dir = version_dir.join("game");
 
     create_dir_all(game_dir.to_owned()).unwrap();
 
@@ -158,7 +145,7 @@ pub async fn gen_run_cmd(
         "net.minecraft.client.main.Main".to_string(),
         format!("--username={}", authntication.username),
         format!("--accessToken={}", authntication.access_token),
-        format!("--version='{} MCTui'", version),
+        format!("--version={}", version.id.clone()),
         // "--userProperties={{}}".to_string(),
         format!("--gameDir={}", game_dir.to_string_lossy()),
         format!("--assetsDir={}", assets.to_string_lossy()),

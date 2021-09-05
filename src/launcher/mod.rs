@@ -110,7 +110,7 @@ impl Launcher {
                 let mut contents = String::new();
                 file.read_to_string(&mut contents)?;
 
-                serde_json::from_str(&contents)?
+                serde_json::from_str(&contents).unwrap_or_default()
             }
             false => Launcher::default(),
         };

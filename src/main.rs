@@ -8,7 +8,6 @@ use platform_dirs::AppDirs;
 use std::fs::create_dir_all;
 use std::sync::{Arc, Mutex};
 use structs::settings::Settings;
-use utils::*;
 
 type SettingsPtr = Arc<Mutex<Settings>>;
 
@@ -24,6 +23,5 @@ async fn main() {
     let settings = Settings::new(app_dirs).expect("Unable to initialize the application settings");
     let settings_ptr = Arc::new(Mutex::new(settings));
 
-    universal::start_checker().await;
     start_tui(settings_ptr).await.unwrap();
 }

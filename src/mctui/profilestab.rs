@@ -1,5 +1,4 @@
-use crate::utils::universal::delete_profile;
-use crate::SettingsPtr;
+use crate::LauncherPtr;
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::layout::{Constraint, Direction, Layout, Rect};
@@ -16,15 +15,15 @@ use super::app::{TuiWidget, WindowType};
 pub struct ProfilesTab {
     profiles_len: usize,
     selected_index: usize,
-    settings: SettingsPtr,
+    launcher: LauncherPtr,
 }
 
 impl ProfilesTab {
-    pub fn new(settings: SettingsPtr) -> Self {
+    pub fn new(launcher: LauncherPtr) -> Self {
         Self {
             profiles_len: 0,
             selected_index: 0,
-            settings,
+            launcher,
         }
     }
 }
@@ -34,20 +33,20 @@ impl TuiWidget for ProfilesTab {
     async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         match key {
             KeyCode::Enter => {
-                let settings = self.settings.lock().unwrap();
+                let launcher = self.launcher.lock().unwrap();
                 return Some(WindowType::ProfileCreator(
-                    settings.profiles.profiles[self.selected_index]
+                    launcher.profiles.profiles[self.selected_index]
                         .id
                         .to_owned(),
                 ));
             }
             KeyCode::Char('n') => return Some(WindowType::ProfileCreator(String::new())),
             KeyCode::Char('d') => {
-                let settings = self.settings.lock().unwrap();
-                let id = settings.profiles.profiles[self.selected_index].id.clone();
-                drop(settings);
+                let mut launcher = self.launcher.lock().unwrap();
+                let id = launcher.profiles.profiles[self.selected_index].id.clone();
 
-                delete_profile(id, self.settings.clone());
+                launcher.profiles.delete(id);
+                launcher.save();
             }
             KeyCode::Down => {
                 if self.selected_index + 1 != self.profiles_len {
@@ -108,11 +107,11 @@ impl TuiWidget for ProfilesTab {
         frame.render_widget(block, layout[1]);
 
         let header = Row::new(vec!["Name", "Version"]);
-        let settings = self.settings.lock().unwrap();
-        self.profiles_len = settings.profiles.profiles.len();
+        let launcher = self.launcher.lock().unwrap();
+        self.profiles_len = launcher.profiles.profiles.len();
 
         let selected_style = Style::default().fg(Color::Cyan);
-        let rows = settings
+        let rows = launcher
             .profiles
             .profiles
             .iter()

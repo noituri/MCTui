@@ -1,11 +1,7 @@
 use super::app::{TuiWidget, WindowType};
-use crate::structs::libraries::Libraries;
+use crate::launcher::installer;
 use crate::structs::versions;
-use crate::SettingsPtr;
-use crate::{
-    constants::VERSIONS,
-    utils::universal::{create_profile, edit_profile},
-};
+use crate::LauncherPtr;
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::backend::Backend;
@@ -23,13 +19,12 @@ pub struct ProfileCreatorWindow {
     pub id: Option<String>,
     pub versions: Vec<versions::Version>,
     list_state: ListState,
-    settings: SettingsPtr,
+    launcher: LauncherPtr,
 }
 
 impl ProfileCreatorWindow {
-    pub async fn new(settings: SettingsPtr) -> Self {
-        let versions_resp: versions::Versions =
-            reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
+    pub async fn new(launcher: LauncherPtr) -> Self {
+        let versions_resp = installer::get_versions().await.unwrap();
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -38,7 +33,7 @@ impl ProfileCreatorWindow {
             input: String::new(),
             id: None,
             versions: versions_resp.versions,
-            settings,
+            launcher,
         }
     }
 }
@@ -50,31 +45,26 @@ impl TuiWidget for ProfileCreatorWindow {
         match key {
             KeyCode::Enter => {
                 let selected_version = &self.versions[selected_item];
-                //TODO check connection
-                let assets_resp: Libraries = reqwest::get(selected_version.url.as_str())
-                    .await
-                    .unwrap()
-                    .json()
-                    .await
-                    .unwrap();
+                let assets_resp = installer::get_libs(selected_version).await.unwrap();
 
+                let mut launcher = self.launcher.lock().unwrap();
                 match self.id.to_owned() {
                     Some(id) => {
-                        edit_profile(
+                        launcher.profiles.edit(
                             id,
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
-                            self.settings.clone(),
                         );
+                        launcher.save();
                     }
                     None => {
-                        create_profile(
+                        launcher.profiles.create(
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
                             assets_resp.asset_index.id,
                             "-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M".to_string(),
-                            self.settings.clone()
                         );
+                        launcher.save();
                     }
                 }
 

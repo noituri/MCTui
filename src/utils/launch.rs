@@ -1,13 +1,12 @@
-use crate::constants::*;
+use crate::launcher::authentication::Authentication;
+use crate::launcher::installer;
+use crate::launcher::profile::Profile;
 use crate::structs::libraries::Libraries;
-use crate::structs::settings::Profile;
-use crate::structs::*;
+use crate::structs::versions::Version;
 use crate::utils::files;
 use crossbeam_channel::Sender;
 use futures::{stream, StreamExt};
-use reqwest;
-use std::fs::{create_dir_all, File};
-use std::io::Read;
+use std::fs::create_dir_all;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -21,112 +20,94 @@ const LIB_SEPARATOR: &str = if cfg!(target_os = "windows") {
 pub async fn prepare_game(
     data_dir: &Path,
     profile: &Profile,
-    username: &str,
+    authentication: &Authentication,
     sender: Sender<String>,
 ) {
-    let versions_resp: versions::Versions =
-        reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
+    // TODO: Cache the installer::* responses
+    let versions = installer::get_versions().await.unwrap();
+    let version = versions
+        .versions
+        .iter()
+        .find(|v| v.id == profile.version)
+        .unwrap();
 
-    for v in versions_resp.versions {
-        if v.id == profile.version {
-            sender.send("Verifying files".to_string()).unwrap();
-            let to_download = files::verify_files(
-                data_dir,
-                reqwest::get(v.url.as_str())
-                    .await
-                    .unwrap()
-                    .json()
-                    .await
-                    .unwrap(),
-                &profile.name,
-            )
+    let libs = installer::get_libs(version).await.unwrap();
+    let assets = installer::get_assets(&libs).await.unwrap();
+
+    sender.send("Verifying files".to_string()).unwrap();
+    let to_download = files::verify_files(data_dir, version, &libs, &assets).await;
+
+    if !to_download.is_empty() {
+        sender.send("Downloading files".to_string()).unwrap();
+
+        let total_to_dl = &to_download.len();
+        let mut total_dl = 0;
+        let stream_sender = &sender.clone();
+
+        stream::iter(to_download)
+            .map(|x| async move { (x.clone(), files::download_file(&x).await) })
+            .buffer_unordered(5)
+            .map(|(x, result)| {
+                total_dl += 1;
+                match result {
+                    Err(e) => {
+                        stream_sender
+                            .send(format!("Error: {:?} when downloading: {:?}", e, x))
+                            .unwrap();
+                    }
+                    _ => {
+                        stream_sender
+                            .send(format!("Downloaded: {}%", total_dl * 100 / total_to_dl))
+                            .unwrap();
+                    }
+                }
+            })
+            .collect::<Vec<_>>()
             .await;
 
-            sender.send("Downloading files".to_string()).unwrap();
-
-            let total_to_dl = &to_download.len();
-            let mut total_dl = 0;
-            let stream_sender = &sender.clone();
-
-            stream::iter(to_download)
-                .map(|(k, v)| async move {
-                    files::download_file(k.to_string(), &v).await;
-                })
-                .buffer_unordered(5)
-                .map(|_| {
-                    total_dl += 1;
-                    stream_sender
-                        .send(format!("Downloaded: {}%", total_dl * 100 / total_to_dl))
-                        .unwrap();
-                })
-                .collect::<Vec<_>>()
-                .await;
-
-            sender.send("All files downloaded".to_string()).unwrap();
-        }
+        sender.send("All files downloaded".to_string()).unwrap();
     }
 
     gen_run_cmd(
         data_dir,
-        &format!("{}/profiles/{}", data_dir.to_string_lossy(), profile.name),
-        username,
-        &profile.version,
+        authentication,
+        version,
         &profile.asset,
         &profile.args,
+        &libs,
         sender.clone(),
     )
     .await;
 }
 
-/// Loads the librairies from the given profile
-fn load_game_libs(profile: &str) -> Libraries {
-    let mut file = File::open(format!("{}/version.json", profile)).unwrap();
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
-    serde_json::from_str(&contents).unwrap()
-}
-
 // Lists all the librairies needed to launch the game
-fn list_libs_path(path: &str, profile: &str) -> Option<Vec<PathBuf>> {
-    let libs_path = Path::new(path);
-
-    if !libs_path.exists() || libs_path.is_file() {
+fn list_libs_path(libs_dir: &Path, libs: &Libraries) -> Option<Vec<PathBuf>> {
+    if !libs_dir.is_dir() {
         return None;
     }
 
-    let version = load_game_libs(profile);
-    let mut libs = Vec::new();
+    let mut libs_paths = Vec::new();
 
-    for lib in version.libraries.iter() {
-        match &lib.downloads.artifact {
-            Some(artifact) => {
-                let artifact_path = artifact.path.to_owned().unwrap();
-                let file_name = &artifact_path.split('/').last().unwrap();
-
-                libs.push(libs_path.join(&artifact_path).join(file_name));
-            }
-            None => {}
+    for lib in libs.libraries.iter() {
+        if let Some(artifact) = &lib.downloads.artifact {
+            libs_paths.push(libs_dir.join(&artifact.path.clone().unwrap()));
         }
 
         if let Some(natives) = lib.downloads.get_natives() {
-            let natives_path = natives.path.to_owned().unwrap();
-            let file_name = &natives_path.split('/').last().unwrap();
-
-            libs.push(libs_path.join(&natives_path).join(file_name));
+            libs_paths.push(libs_dir.join(&natives.path.clone().unwrap()));
         }
     }
 
-    Some(libs)
+    Some(libs_paths)
 }
 
 pub async fn gen_run_cmd(
     data_dir: &Path,
-    profile: &str,
-    // natives: &str,
-    username: &str,
-    version: &str,
+    authntication: &Authentication,
+    version: &Version,
     asset_index: &str,
     args: &str,
+    libs: &Libraries,
     sender: Sender<String>,
 ) {
     sender
@@ -135,13 +116,13 @@ pub async fn gen_run_cmd(
 
     let dot = data_dir.to_string_lossy().to_string();
     let base_dir = Path::new(&dot);
-    let profile_dir = Path::new(&profile);
+    let version_dir = data_dir.join("versions").join(version.id.clone());
 
-    let mut libs = list_libs_path(format!("{}/libs", dot).as_str(), profile).unwrap();
-    libs.push(profile_dir.join("client.jar"));
+    let mut libs = list_libs_path(data_dir.join("libraries").as_path(), libs).unwrap();
+    libs.push(version_dir.join("client.jar"));
 
     let assets = base_dir.join("assets");
-    let game_dir = profile_dir.join("game");
+    let game_dir = version_dir.join("game");
 
     create_dir_all(game_dir.to_owned()).unwrap();
 
@@ -162,9 +143,9 @@ pub async fn gen_run_cmd(
         "-cp".to_string(),
         libs_args,
         "net.minecraft.client.main.Main".to_string(),
-        format!("--username={}", username),
-        format!("--version='{} MCTui'", version),
-        "--accessToken=0".to_string(),
+        format!("--username={}", authntication.username),
+        format!("--accessToken={}", authntication.access_token),
+        format!("--version={}", version.id.clone()),
         // "--userProperties={{}}".to_string(),
         format!("--gameDir={}", game_dir.to_string_lossy()),
         format!("--assetsDir={}", assets.to_string_lossy()),

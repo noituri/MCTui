@@ -19,11 +19,9 @@ async fn main() {
 
     let dot = &app_dirs.data_dir;
 
-    create_dir_all(&dot.as_path())
-        .expect("Unable to create the launcher application directory");
+    create_dir_all(&dot.as_path()).expect("Unable to create the launcher application directory");
 
-    let settings = Settings::new(app_dirs)
-        .expect("Unable to initialize the application settings");
+    let settings = Settings::new(app_dirs).expect("Unable to initialize the application settings");
     let settings_ptr = Arc::new(Mutex::new(settings));
 
     universal::start_checker().await;

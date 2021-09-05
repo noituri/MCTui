@@ -1,12 +1,10 @@
-use crate::constants::*;
 use crate::launcher::authentication::Authentication;
+use crate::launcher::installer;
 use crate::launcher::profile::Profile;
 use crate::structs::libraries::Libraries;
-use crate::structs::*;
 use crate::utils::files;
 use crossbeam_channel::Sender;
 use futures::{stream, StreamExt};
-use reqwest;
 use std::fs::{create_dir_all, File};
 use std::io::Read;
 use std::io::{BufRead, BufReader};
@@ -25,20 +23,13 @@ pub async fn prepare_game(
     authentication: &Authentication,
     sender: Sender<String>,
 ) {
-    let versions_resp: versions::Versions =
-        reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
-
+    let versions_resp = installer::get_versions().await.unwrap();
     for v in versions_resp.versions {
         if v.id == profile.version {
             sender.send("Verifying files".to_string()).unwrap();
             let to_download = files::verify_files(
                 data_dir,
-                reqwest::get(v.url.as_str())
-                    .await
-                    .unwrap()
-                    .json()
-                    .await
-                    .unwrap(),
+                installer::get_libs(&v).await.unwrap(),
                 &profile.name,
             )
             .await;

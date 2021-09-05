@@ -1,6 +1,5 @@
 use super::app::{TuiWidget, WindowType};
-use crate::constants::VERSIONS;
-use crate::structs::libraries::Libraries;
+use crate::launcher::installer;
 use crate::structs::versions;
 use crate::LauncherPtr;
 use async_trait::async_trait;
@@ -25,8 +24,7 @@ pub struct ProfileCreatorWindow {
 
 impl ProfileCreatorWindow {
     pub async fn new(launcher: LauncherPtr) -> Self {
-        let versions_resp: versions::Versions =
-            reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
+        let versions_resp = installer::get_versions().await.unwrap();
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -47,13 +45,7 @@ impl TuiWidget for ProfileCreatorWindow {
         match key {
             KeyCode::Enter => {
                 let selected_version = &self.versions[selected_item];
-                //TODO check connection
-                let assets_resp: Libraries = reqwest::get(selected_version.url.as_str())
-                    .await
-                    .unwrap()
-                    .json()
-                    .await
-                    .unwrap();
+                let assets_resp = installer::get_libs(selected_version).await.unwrap();
 
                 let mut launcher = self.launcher.lock().unwrap();
                 match self.id.to_owned() {

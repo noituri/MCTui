@@ -1,4 +1,5 @@
 pub mod authentication;
+pub mod installer;
 pub mod profile;
 
 use platform_dirs::AppDirs;

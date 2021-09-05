@@ -1,4 +1,5 @@
 use crate::constants::*;
+use crate::launcher::installer;
 use crate::structs::*;
 use reqwest;
 use sha1::Digest;
@@ -95,12 +96,7 @@ pub async fn verify_files(
 
     let mut to_download = Vec::new();
 
-    let assets_resp: assets::Assets = reqwest::get(libs_resp.asset_index.url.as_str())
-        .await
-        .unwrap()
-        .json()
-        .await
-        .unwrap();
+    let assets_resp = installer::get_assets(&libs_resp).await.unwrap();
     let a_indx_path = format!("{}/assets/indexes", dot.to_owned());
 
     verify_file_exists(

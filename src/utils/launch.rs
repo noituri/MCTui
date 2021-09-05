@@ -50,15 +50,22 @@ pub async fn prepare_game(
             let stream_sender = &sender.clone();
 
             stream::iter(to_download)
-                .map(|x| async move {
-                    files::download_file(&x).await;
-                })
+                .map(|x| async move { (x.clone(), files::download_file(&x).await) })
                 .buffer_unordered(5)
-                .map(|_| {
+                .map(|(x, result)| {
                     total_dl += 1;
-                    stream_sender
-                        .send(format!("Downloaded: {}%", total_dl * 100 / total_to_dl))
-                        .unwrap();
+                    match result {
+                        Err(e) => {
+                            stream_sender
+                                .send(format!("Error: {:?} when downloading: {:?}", x, e))
+                                .unwrap();
+                        }
+                        _ => {
+                            stream_sender
+                                .send(format!("Downloaded: {}%", total_dl * 100 / total_to_dl))
+                                .unwrap();
+                        }
+                    }
                 })
                 .collect::<Vec<_>>()
                 .await;

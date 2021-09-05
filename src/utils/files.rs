@@ -1,75 +1,58 @@
 use crate::constants::*;
 use crate::structs::*;
 use reqwest;
-use reqwest::StatusCode;
 use sha1::Digest;
 use sha1::Sha1;
 use std::fs::create_dir_all;
 use std::fs::File;
 use std::io;
 use std::path::Path;
+use thiserror::Error;
 
+#[derive(Error, Debug)]
+pub enum DownloadError {
+    #[error("the file checksum does not match the one expected")]
+    InvalidChecksum,
+    #[error("http client error")]
+    HttpClient(#[from] reqwest::Error),
+    #[error("io error")]
+    Io(#[from] io::Error),
+}
+
+#[derive(Clone, Debug)]
 pub struct Download {
     url: String,
     dest_path: String,
     checksum: Option<String>,
 }
 
-pub async fn download_file(download: &Download) {
+/// Download the content of an URL to the disk
+pub async fn download_file(download: &Download) -> Result<u64, DownloadError> {
     create_dir_all(&download.dest_path).unwrap();
 
     let url_parts: Vec<&str> = download.url.split('/').collect();
     let output = Path::new(&download.dest_path).join(url_parts.last().unwrap());
 
-    match reqwest::get(download.url.as_str()).await {
-        Ok(resp) => {
-            match resp.status() {
-                StatusCode::OK => (),
-                _ => {
-                    println!("Could not download this file: {}", download.url);
-                    return;
-                }
-            }
-            let mut file = match File::create(&output) {
-                Ok(f) => f,
-                Err(err) => {
-                    println!(
-                        "Error occurred while creating file: {} | Error: {}",
-                        output.display(),
-                        err
-                    );
-                    return;
-                }
-            };
+    let content = reqwest::get(download.url.as_str())
+        .await?
+        .error_for_status()?
+        .bytes()
+        .await?;
 
-            let bytes = resp.bytes().await.unwrap();
+    if let Some(hash) = &download.checksum {
+        let mut sha = Sha1::default();
+        sha.update(&content);
+        // FIXME: is there a better way to do this without format!() ?
+        let file_hash = format!("{:x}", sha.finalize());
 
-            if let Some(hash) = &download.checksum {
-                let mut sha = Sha1::default();
-                sha.update(&bytes);
-                // FIXME: is there a better way to do this without format!() ?
-                let file_hash = format!("{:x}", sha.finalize());
-
-                // Security: Do not copy the file if the checksum is not valid
-                if file_hash.as_str() == hash {
-                    match io::copy(&mut bytes.as_ref(), &mut file) {
-                        Ok(_) => {} //println!("File {} has been downloaded", output.display()),
-                        Err(err) => {
-                            println!(
-                                "Could not download this file: {} | Error: {}",
-                                download.url, err
-                            )
-                        }
-                    }
-                }
-            }
+        // Security: Do not copy the file if the checksum is not valid
+        if file_hash.as_str() != hash {
+            return Err(DownloadError::InvalidChecksum);
         }
+    }
 
-        Err(err) => println!(
-            "Could not download this file: {} | Error: {}",
-            download.url, err
-        ),
-    };
+    let file = &mut File::create(&output)?;
+    Ok(io::copy(&mut content.as_ref(), file)?)
 }
 
 fn verify_file_exists(

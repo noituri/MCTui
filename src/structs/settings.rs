@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
+use uuid::Uuid;
 
 const FILE_NAME: &str = "mctui.json";
 
@@ -42,6 +43,68 @@ impl Settings {
         let settings_path = self.app_dirs.as_ref().unwrap().data_dir.join(FILE_NAME);
 
         serde_json::to_writer_pretty(&File::create(settings_path).unwrap(), self).unwrap();
+    }
+
+    pub fn get_profile(&self, id: &str) -> Option<Profile> {
+        self.profiles
+            .profiles
+            .iter()
+            .find(|x| x.id == id)
+            .map(Clone::clone)
+    }
+
+    pub fn create_profile(&mut self, name: String, version: String, asset: String, args: String) {
+        let mut id = Uuid::new_v4().to_string();
+
+        loop {
+            let mut exists = false;
+            for p in &self.profiles.profiles {
+                if p.id == id {
+                    id = Uuid::new_v4().to_string();
+                    exists = true
+                }
+            }
+
+            if !exists {
+                break;
+            }
+        }
+
+        self.profiles.profiles.push(Profile {
+            id: id.to_owned(),
+            name,
+            version,
+            asset,
+            args,
+        });
+
+        if self.profiles.selected.is_empty() {
+            self.profiles.selected = id;
+        }
+
+        self.save();
+    }
+
+    pub fn edit_profile(&mut self, id: String, name: String, version: String) {
+        for p in self.profiles.profiles.iter_mut() {
+            if p.id == id {
+                p.name = name.to_owned();
+                p.version = version.to_owned();
+            }
+        }
+
+        self.save();
+    }
+
+    pub fn delete_profile(&mut self, id: String) {
+        let index = self
+            .profiles
+            .profiles
+            .iter()
+            .position(|p| *p.id == id)
+            .unwrap();
+        self.profiles.profiles.remove(index);
+        self.save();
     }
 }
 

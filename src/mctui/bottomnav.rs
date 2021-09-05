@@ -9,7 +9,6 @@ use tui::{
     widgets::{Block, Borders, List, ListItem, ListState},
 };
 
-use crate::utils::universal::get_profile;
 use crate::SettingsPtr;
 
 use super::app::{TuiWidget, WindowType};
@@ -75,9 +74,8 @@ impl TuiWidget for BottomNav {
                         let id = settings.profiles.selected.clone();
                         let username = settings.auth.username.clone();
                         let data_dir = settings.app_dirs.as_ref().unwrap().data_dir.clone();
-                        drop(settings);
 
-                        let profile = get_profile(&id, self.settings.clone()).unwrap();
+                        let profile = settings.get_profile(&id).unwrap();
 
                         if let Some(sender) = self.sender.to_owned() {
                             tokio::spawn(async move {
@@ -147,15 +145,10 @@ impl TuiWidget for BottomNav {
             if !self.profile_selector {
                 let settings = self.settings.lock().unwrap();
                 let selected_profile = settings.profiles.selected.to_owned();
-                drop(settings);
 
-                let profile =
-                    crate::universal::get_profile(&selected_profile, self.settings.clone());
-                match profile {
-                    Some(p) => {
-                        self.items.middle[1] = self.items.middle[1].replace("${profile}", &p.name)
-                    }
-                    None => self.items.middle[1] = "Select Profile".to_string(),
+                self.items.middle[1] = match settings.get_profile(&selected_profile) {
+                    Some(p) => self.items.middle[1].replace("${profile}", &p.name),
+                    None => "Select Profile".to_string(),
                 }
             }
         }

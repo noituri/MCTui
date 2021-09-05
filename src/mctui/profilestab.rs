@@ -1,4 +1,3 @@
-use crate::utils::universal::delete_profile;
 use crate::SettingsPtr;
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
@@ -43,11 +42,10 @@ impl TuiWidget for ProfilesTab {
             }
             KeyCode::Char('n') => return Some(WindowType::ProfileCreator(String::new())),
             KeyCode::Char('d') => {
-                let settings = self.settings.lock().unwrap();
+                let mut settings = self.settings.lock().unwrap();
                 let id = settings.profiles.profiles[self.selected_index].id.clone();
-                drop(settings);
 
-                delete_profile(id, self.settings.clone());
+                settings.delete_profile(id);
             }
             KeyCode::Down => {
                 if self.selected_index + 1 != self.profiles_len {

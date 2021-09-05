@@ -1,11 +1,8 @@
 use super::app::{TuiWidget, WindowType};
+use crate::constants::VERSIONS;
 use crate::structs::libraries::Libraries;
 use crate::structs::versions;
 use crate::SettingsPtr;
-use crate::{
-    constants::VERSIONS,
-    utils::universal::{create_profile, edit_profile},
-};
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::backend::Backend;
@@ -58,22 +55,21 @@ impl TuiWidget for ProfileCreatorWindow {
                     .await
                     .unwrap();
 
+                let mut settings = self.settings.lock().unwrap();
                 match self.id.to_owned() {
                     Some(id) => {
-                        edit_profile(
+                        settings.edit_profile(
                             id,
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
-                            self.settings.clone(),
                         );
                     }
                     None => {
-                        create_profile(
+                        settings.create_profile(
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
                             assets_resp.asset_index.id,
                             "-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M".to_string(),
-                            self.settings.clone()
                         );
                     }
                 }

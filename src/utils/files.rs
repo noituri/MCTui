@@ -1,6 +1,5 @@
 use crate::constants::*;
 use crate::structs::*;
-use futures::future::join_all;
 use reqwest;
 use reqwest::StatusCode;
 use sha1::Digest;
@@ -8,23 +7,26 @@ use sha1::Sha1;
 use std::fs::create_dir_all;
 use std::fs::File;
 use std::io;
-use std::io::Read;
 use std::path::Path;
-use std::sync::Mutex;
-use std::{collections::HashMap, sync::Arc};
 
-pub async fn download_file(url: String, path: &str) {
-    create_dir_all(path).unwrap();
+pub struct Download {
+    url: String,
+    dest_path: String,
+    checksum: Option<String>,
+}
 
-    let url_parts: Vec<&str> = url.split('/').collect();
-    let output = Path::new(path).join(url_parts.last().unwrap());
+pub async fn download_file(download: &Download) {
+    create_dir_all(&download.dest_path).unwrap();
 
-    match reqwest::get(url.as_str()).await {
+    let url_parts: Vec<&str> = download.url.split('/').collect();
+    let output = Path::new(&download.dest_path).join(url_parts.last().unwrap());
+
+    match reqwest::get(download.url.as_str()).await {
         Ok(resp) => {
             match resp.status() {
                 StatusCode::OK => (),
                 _ => {
-                    println!("Could not download this file: {}", url);
+                    println!("Could not download this file: {}", download.url);
                     return;
                 }
             }
@@ -41,43 +43,51 @@ pub async fn download_file(url: String, path: &str) {
             };
 
             let bytes = resp.bytes().await.unwrap();
-            match io::copy(&mut bytes.as_ref(), &mut file) {
-                Ok(_) => {} //println!("File {} has been downloaded", output.display()),
-                Err(err) => println!("Could not download this file: {} | Error: {}", url, err),
+
+            if let Some(hash) = &download.checksum {
+                let mut sha = Sha1::default();
+                sha.update(&bytes);
+                // FIXME: is there a better way to do this without format!() ?
+                let file_hash = format!("{:x}", sha.finalize());
+
+                // Security: Do not copy the file if the checksum is not valid
+                if file_hash.as_str() == hash {
+                    match io::copy(&mut bytes.as_ref(), &mut file) {
+                        Ok(_) => {} //println!("File {} has been downloaded", output.display()),
+                        Err(err) => {
+                            println!(
+                                "Could not download this file: {} | Error: {}",
+                                download.url, err
+                            )
+                        }
+                    }
+                }
             }
         }
 
-        Err(err) => println!("Could not download this file: {} | Error: {}", url, err),
+        Err(err) => println!(
+            "Could not download this file: {} | Error: {}",
+            download.url, err
+        ),
     };
 }
 
-async fn verify_file_exists(
+fn verify_file_exists(
     file_path: String,
     hash: String,
-    to_download: Arc<Mutex<HashMap<String, String>>>,
     url: String,
+    to_download: &mut Vec<Download>,
 ) {
     let path = Path::new(&file_path);
     let mut file_dir = file_path.to_string();
     file_dir.truncate(file_path.rfind('/').unwrap());
-    {
-        let mut td = to_download.lock().unwrap();
-        if !path.exists() || path.is_dir() {
-            td.insert(url, file_dir);
-            return;
-        }
-    }
 
-    let mut file = File::open(file_path).unwrap();
-    let mut bytes = Vec::new();
-
-    File::read_to_end(&mut file, &mut bytes).unwrap();
-
-    let mut sha = Sha1::default();
-    sha.update(&bytes);
-    if format!("{:x}", sha.finalize()).as_str() != hash {
-        let mut td = to_download.lock().unwrap();
-        td.insert(url, file_dir);
+    if !path.is_file() {
+        to_download.push(Download {
+            url,
+            dest_path: file_dir,
+            checksum: Some(hash),
+        });
     }
 }
 
@@ -85,7 +95,7 @@ pub async fn verify_files(
     data_dir: &Path,
     libs_resp: libraries::Libraries,
     profile: &str,
-) -> HashMap<String, String> {
+) -> Vec<Download> {
     let dot = data_dir.to_string_lossy().to_string();
 
     create_dir_all(format!("{}/profiles/{}", dot.to_owned(), profile)).unwrap();
@@ -100,8 +110,7 @@ pub async fn verify_files(
     )
     .unwrap();
 
-    let mut verify_futures = Vec::new();
-    let to_download: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
+    let mut to_download = Vec::new();
 
     let assets_resp: assets::Assets = reqwest::get(libs_resp.asset_index.url.as_str())
         .await
@@ -111,32 +120,32 @@ pub async fn verify_files(
         .unwrap();
     let a_indx_path = format!("{}/assets/indexes", dot.to_owned());
 
-    verify_futures.push(verify_file_exists(
+    verify_file_exists(
         format!("{}/{}", a_indx_path, libs_resp.asset_index.id),
         format!("{}/{}", a_indx_path, libs_resp.asset_index.id),
-        to_download.clone(),
         libs_resp.asset_index.url,
-    ));
+        &mut to_download,
+    );
 
     for asset in assets_resp.objects.values() {
         let asset_path = format!("{}/assets/objects/{}", dot.to_owned(), &asset.hash[0..2]);
 
-        verify_futures.push(verify_file_exists(
+        verify_file_exists(
             format!("{}/{}", asset_path, &asset.hash),
             asset.hash.to_owned(),
-            to_download.clone(),
             format!("{}/{}/{}", RESOURCES, &asset.hash[0..2], &asset.hash),
-        ));
+            &mut to_download,
+        );
     }
 
     let client_path = format!("{}/profiles/{}", dot.to_owned(), profile);
     let client = libs_resp.downloads.client.unwrap();
-    verify_futures.push(verify_file_exists(
+    verify_file_exists(
         format!("{}/client.jar", client_path),
         client.sha1,
-        to_download.clone(),
         client.url,
-    ));
+        &mut to_download,
+    );
 
     for lib in libs_resp.libraries.iter() {
         match &lib.downloads.artifact {
@@ -148,12 +157,12 @@ pub async fn verify_files(
                     dot.to_owned(),
                     artifact.path.to_owned().unwrap()
                 );
-                verify_futures.push(verify_file_exists(
+                verify_file_exists(
                     format!("{}/{}", artifact_path, url_parts.last().unwrap()),
                     artifact.sha1.to_owned(),
-                    to_download.clone(),
                     artifact.url.to_owned(),
-                ));
+                    &mut to_download,
+                );
             }
             None => {}
         }
@@ -166,17 +175,14 @@ pub async fn verify_files(
                 dot.to_owned(),
                 natives.path.to_owned().unwrap()
             );
-            verify_futures.push(verify_file_exists(
+            verify_file_exists(
                 format!("{}/{}", class_path, url_parts.last().unwrap()),
                 natives.sha1.to_owned(),
-                to_download.clone(),
                 natives.url.to_owned(),
-            ));
+                &mut to_download,
+            );
         }
     }
 
-    join_all(verify_futures).await;
-
-    let td = to_download.lock().unwrap();
-    td.clone()
+    to_download
 }

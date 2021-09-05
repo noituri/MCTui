@@ -50,8 +50,8 @@ pub async fn prepare_game(
             let stream_sender = &sender.clone();
 
             stream::iter(to_download)
-                .map(|(k, v)| async move {
-                    files::download_file(k.to_string(), &v).await;
+                .map(|x| async move {
+                    files::download_file(&x).await;
                 })
                 .buffer_unordered(5)
                 .map(|_| {

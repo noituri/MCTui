@@ -1,6 +1,6 @@
 use crate::constants::*;
-use crate::launcher::installer;
-use crate::structs::*;
+use crate::structs::assets::Assets;
+use crate::structs::libraries::Libraries;
 use reqwest;
 use sha1::Digest;
 use sha1::Sha1;
@@ -77,37 +77,28 @@ fn verify_file_exists(
 
 pub async fn verify_files(
     data_dir: &Path,
-    libs_resp: libraries::Libraries,
+    libs_resp: &Libraries,
+    assets: &Assets,
     profile: &str,
 ) -> Vec<Download> {
     let dot = data_dir.to_string_lossy().to_string();
 
-    create_dir_all(format!("{}/profiles/{}", dot.to_owned(), profile)).unwrap();
-    serde_json::to_writer_pretty(
-        &File::create(format!(
-            "{}/profiles/{}/version.json",
-            dot.to_owned(),
-            profile
-        ))
-        .unwrap(),
-        &libs_resp,
-    )
-    .unwrap();
-
+    create_dir_all(format!("{}/profiles/{}", dot, profile)).unwrap();
     let mut to_download = Vec::new();
 
-    let assets_resp = installer::get_assets(&libs_resp).await.unwrap();
-    let a_indx_path = format!("{}/assets/indexes", dot.to_owned());
+    let a_indx_path = format!("{}/assets/indexes", dot);
 
+    // FIXME: the URL does not have the .json, but the dest file had.
+    // So, the file is always missing
     verify_file_exists(
         format!("{}/{}", a_indx_path, libs_resp.asset_index.id),
-        libs_resp.asset_index.sha1,
-        libs_resp.asset_index.url,
+        libs_resp.asset_index.sha1.clone(),
+        libs_resp.asset_index.url.clone(),
         &mut to_download,
     );
 
-    for asset in assets_resp.objects.values() {
-        let asset_path = format!("{}/assets/objects/{}", dot.to_owned(), &asset.hash[0..2]);
+    for asset in assets.objects.values() {
+        let asset_path = format!("{}/assets/objects/{}", dot, &asset.hash[0..2]);
 
         verify_file_exists(
             format!("{}/{}", asset_path, &asset.hash),
@@ -117,11 +108,11 @@ pub async fn verify_files(
         );
     }
 
-    let client_path = format!("{}/profiles/{}", dot.to_owned(), profile);
-    let client = libs_resp.downloads.client.unwrap();
+    let client_path = format!("{}/profiles/{}", dot, profile);
+    let client = libs_resp.downloads.client.clone().unwrap();
     verify_file_exists(
         format!("{}/client.jar", client_path),
-        client.sha1,
+        client.sha1.clone(),
         client.url,
         &mut to_download,
     );

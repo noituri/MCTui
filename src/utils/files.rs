@@ -105,7 +105,7 @@ pub async fn verify_files(
 
     verify_file_exists(
         format!("{}/{}", a_indx_path, libs_resp.asset_index.id),
-        format!("{}/{}", a_indx_path, libs_resp.asset_index.id),
+        libs_resp.asset_index.sha1,
         libs_resp.asset_index.url,
         &mut to_download,
     );

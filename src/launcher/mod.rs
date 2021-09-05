@@ -1,3 +1,5 @@
+pub mod authentication;
+
 use platform_dirs::AppDirs;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -5,13 +7,36 @@ use std::fs::File;
 use std::io::Read;
 use uuid::Uuid;
 
-use crate::structs::settings::{Auth, Profile, Profiles};
+use crate::structs::settings::{Profile, Profiles};
+
+use self::authentication::Authentication;
 
 const FILE_NAME: &str = "mctui.json";
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct LauncherAuth {
+    authentication: Option<Authentication>,
+}
+
+impl LauncherAuth {
+    /// Returns the authentication state
+    pub fn get(&self) -> Option<&Authentication> {
+        self.authentication.as_ref()
+    }
+
+    /// Authenticates the user to Minecraft
+    pub fn authenticate(&mut self, id: &str, _password: &str) {
+        self.authentication = Some(Authentication {
+            username: id.to_string(),
+            access_token: "0".to_string(),
+            client_token: "".to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Launcher {
-    pub auth: Auth,
+    pub auth: LauncherAuth,
     pub profiles: Profiles,
 
     /// FIXME: Temporary solution until Launcher refactoring
@@ -113,11 +138,8 @@ impl Launcher {
 impl Default for Launcher {
     fn default() -> Launcher {
         Launcher {
-            auth: Auth {
-                username: "".to_string(),
-                access_token: "".to_string(),
-                client_token: "".to_string(),
-                online: false,
+            auth: LauncherAuth {
+                authentication: None,
             },
             profiles: Profiles {
                 selected: "".to_string(),

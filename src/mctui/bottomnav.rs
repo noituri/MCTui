@@ -72,17 +72,17 @@ impl TuiWidget for BottomNav {
                     0 => {
                         let launcher = self.launcher.lock().unwrap();
                         let id = launcher.profiles.selected.clone();
-                        let username = launcher.auth.username.clone();
                         let data_dir = launcher.app_dirs.as_ref().unwrap().data_dir.clone();
 
                         let profile = launcher.get_profile(&id).unwrap();
+                        let authentication = launcher.auth.get().cloned().unwrap();
 
                         if let Some(sender) = self.sender.to_owned() {
                             tokio::spawn(async move {
                                 crate::utils::launch::prepare_game(
                                     &data_dir,
                                     &profile,
-                                    &username,
+                                    &authentication,
                                     sender.clone(),
                                 )
                                 .await;

@@ -25,18 +25,21 @@ pub struct TuiWindows {
 }
 
 impl App {
-    pub async fn new(launcher: LauncherPtr) -> Self {
-        let mut current_window = WindowType::Welcome;
+    pub async fn new(launcher_ptr: LauncherPtr) -> Self {
+        let launcher = launcher_ptr.lock().unwrap();
+        let authentication = launcher.auth.get();
 
-        if !launcher.lock().unwrap().auth.username.is_empty() {
-            current_window = WindowType::Home;
-        }
+        let current_window = match authentication {
+            Some(_) => WindowType::Home,
+            None => WindowType::Welcome,
+        };
+
         Self {
             current_window,
             windows: TuiWindows {
-                welcome: WelcomeWindow::new(launcher.clone()),
-                profile_creator: ProfileCreatorWindow::new(launcher.clone()).await,
-                home: HomeWindow::new(launcher.clone()),
+                welcome: WelcomeWindow::new(launcher_ptr.clone()),
+                profile_creator: ProfileCreatorWindow::new(launcher_ptr.clone()).await,
+                home: HomeWindow::new(launcher_ptr.clone()),
             },
         }
     }

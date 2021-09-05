@@ -38,7 +38,8 @@ impl TuiWidget for WelcomeWindow {
         match key {
             KeyCode::Enter => {
                 let mut launcher = self.launcher.lock().unwrap();
-                launcher.auth.username = self.input.0.to_owned();
+                launcher.auth.authenticate(&self.input.0, &self.input.1);
+
                 launcher.save();
 
                 if launcher.profiles.profiles.is_empty() {

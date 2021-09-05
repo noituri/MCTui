@@ -1,4 +1,5 @@
 use crate::constants::*;
+use crate::launcher::authentication::Authentication;
 use crate::structs::libraries::Libraries;
 use crate::structs::settings::Profile;
 use crate::structs::*;
@@ -21,7 +22,7 @@ const LIB_SEPARATOR: &str = if cfg!(target_os = "windows") {
 pub async fn prepare_game(
     data_dir: &Path,
     profile: &Profile,
-    username: &str,
+    authentication: &Authentication,
     sender: Sender<String>,
 ) {
     let versions_resp: versions::Versions =
@@ -69,7 +70,7 @@ pub async fn prepare_game(
     gen_run_cmd(
         data_dir,
         &format!("{}/profiles/{}", data_dir.to_string_lossy(), profile.name),
-        username,
+        authentication,
         &profile.version,
         &profile.asset,
         &profile.args,
@@ -123,7 +124,7 @@ pub async fn gen_run_cmd(
     data_dir: &Path,
     profile: &str,
     // natives: &str,
-    username: &str,
+    authntication: &Authentication,
     version: &str,
     asset_index: &str,
     args: &str,
@@ -162,9 +163,9 @@ pub async fn gen_run_cmd(
         "-cp".to_string(),
         libs_args,
         "net.minecraft.client.main.Main".to_string(),
-        format!("--username={}", username),
+        format!("--username={}", authntication.username),
+        format!("--accessToken={}", authntication.access_token),
         format!("--version='{} MCTui'", version),
-        "--accessToken=0".to_string(),
         // "--userProperties={{}}".to_string(),
         format!("--gameDir={}", game_dir.to_string_lossy()),
         format!("--assetsDir={}", assets.to_string_lossy()),

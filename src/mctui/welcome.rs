@@ -1,4 +1,4 @@
-use crate::SettingsPtr;
+use crate::LauncherPtr;
 
 use super::app::TuiWidget;
 use super::app::WindowType;
@@ -19,15 +19,15 @@ pub enum Selected {
 pub struct WelcomeWindow {
     pub input: (String, String),
     pub selected: Selected,
-    settings: SettingsPtr,
+    launcher: LauncherPtr,
 }
 
 impl WelcomeWindow {
-    pub fn new(settings: SettingsPtr) -> Self {
+    pub fn new(launcher: LauncherPtr) -> Self {
         Self {
             input: (String::new(), String::new()),
             selected: Selected::Username,
-            settings,
+            launcher,
         }
     }
 }
@@ -37,11 +37,11 @@ impl TuiWidget for WelcomeWindow {
     async fn handle_events(&mut self, key: KeyCode) -> Option<WindowType> {
         match key {
             KeyCode::Enter => {
-                let mut settings = self.settings.lock().unwrap();
-                settings.auth.username = self.input.0.to_owned();
-                settings.save();
+                let mut launcher = self.launcher.lock().unwrap();
+                launcher.auth.username = self.input.0.to_owned();
+                launcher.save();
 
-                if settings.profiles.profiles.is_empty() {
+                if launcher.profiles.profiles.is_empty() {
                     return Some(WindowType::ProfileCreator(String::new()));
                 } else {
                     return Some(WindowType::Home);

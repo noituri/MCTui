@@ -1,15 +1,16 @@
 mod constants;
+mod launcher;
 mod mctui;
 mod structs;
 mod utils;
 
 use crate::mctui::tui::start_tui;
+use launcher::Launcher;
 use platform_dirs::AppDirs;
 use std::fs::create_dir_all;
 use std::sync::{Arc, Mutex};
-use structs::settings::Settings;
 
-type SettingsPtr = Arc<Mutex<Settings>>;
+type LauncherPtr = Arc<Mutex<Launcher>>;
 
 #[tokio::main]
 async fn main() {
@@ -20,8 +21,8 @@ async fn main() {
 
     create_dir_all(&dot.as_path()).expect("Unable to create the launcher application directory");
 
-    let settings = Settings::new(app_dirs).expect("Unable to initialize the application settings");
-    let settings_ptr = Arc::new(Mutex::new(settings));
+    let launcher = Launcher::new(app_dirs).expect("Unable to initialize the launcher");
+    let launcher_ptr = Arc::new(Mutex::new(launcher));
 
-    start_tui(settings_ptr).await.unwrap();
+    start_tui(launcher_ptr).await.unwrap();
 }

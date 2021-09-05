@@ -6,7 +6,7 @@ use tui::widgets::{Block, Borders, Tabs};
 use tui::Frame;
 use tui::{backend::Backend, text::Spans};
 
-use crate::SettingsPtr;
+use crate::LauncherPtr;
 
 use super::{
     app::{TuiWidget, WindowType},
@@ -23,12 +23,12 @@ pub struct HomeWindow {
 }
 
 impl HomeWindow {
-    pub fn new(settings: SettingsPtr) -> Self {
+    pub fn new(launcher: LauncherPtr) -> Self {
         Self {
             tab_index: 0,
             logger: LoggerFrame::new(),
-            bottom_nav: BottomNav::new(settings.clone()),
-            profiles_tab: ProfilesTab::new(settings),
+            bottom_nav: BottomNav::new(launcher.clone()),
+            profiles_tab: ProfilesTab::new(launcher),
         }
     }
 }

@@ -9,7 +9,7 @@ use tui::{
     widgets::{Block, Borders, List, ListItem, ListState},
 };
 
-use crate::SettingsPtr;
+use crate::LauncherPtr;
 
 use super::app::{TuiWidget, WindowType};
 
@@ -17,7 +17,7 @@ pub struct BottomNav {
     pub items: Items,
     pub sender: Option<Sender<String>>,
     profile_selector: bool,
-    settings: SettingsPtr,
+    launcher: LauncherPtr,
 }
 
 pub struct Items {
@@ -26,7 +26,7 @@ pub struct Items {
 }
 
 impl BottomNav {
-    pub fn new(settings: SettingsPtr) -> Self {
+    pub fn new(launcher: LauncherPtr) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
         Self {
@@ -39,7 +39,7 @@ impl BottomNav {
             },
             sender: None,
             profile_selector: false,
-            settings,
+            launcher,
         }
     }
 }
@@ -52,11 +52,11 @@ impl TuiWidget for BottomNav {
             KeyCode::Enter => {
                 if self.profile_selector {
                     if selected_item != 0 {
-                        let mut settings = self.settings.lock().unwrap();
-                        settings.profiles.selected =
-                            settings.profiles.profiles[selected_item - 1].id.to_owned();
+                        let mut launcher = self.launcher.lock().unwrap();
+                        launcher.profiles.selected =
+                            launcher.profiles.profiles[selected_item - 1].id.to_owned();
 
-                        settings.save();
+                        launcher.save();
                     }
 
                     self.items.state.select(Some(0));
@@ -70,12 +70,12 @@ impl TuiWidget for BottomNav {
 
                 match selected_item {
                     0 => {
-                        let settings = self.settings.lock().unwrap();
-                        let id = settings.profiles.selected.clone();
-                        let username = settings.auth.username.clone();
-                        let data_dir = settings.app_dirs.as_ref().unwrap().data_dir.clone();
+                        let launcher = self.launcher.lock().unwrap();
+                        let id = launcher.profiles.selected.clone();
+                        let username = launcher.auth.username.clone();
+                        let data_dir = launcher.app_dirs.as_ref().unwrap().data_dir.clone();
 
-                        let profile = settings.get_profile(&id).unwrap();
+                        let profile = launcher.get_profile(&id).unwrap();
 
                         if let Some(sender) = self.sender.to_owned() {
                             tokio::spawn(async move {
@@ -90,9 +90,9 @@ impl TuiWidget for BottomNav {
                         }
                     }
                     1 => {
-                        let settings = self.settings.lock().unwrap();
+                        let launcher = self.launcher.lock().unwrap();
                         let mut temp_vec = vec!["<--".to_string()];
-                        for p in settings.profiles.profiles.iter() {
+                        for p in launcher.profiles.profiles.iter() {
                             temp_vec.push(p.name.to_owned());
                         }
 
@@ -143,10 +143,10 @@ impl TuiWidget for BottomNav {
 
         {
             if !self.profile_selector {
-                let settings = self.settings.lock().unwrap();
-                let selected_profile = settings.profiles.selected.to_owned();
+                let launcher = self.launcher.lock().unwrap();
+                let selected_profile = launcher.profiles.selected.to_owned();
 
-                self.items.middle[1] = match settings.get_profile(&selected_profile) {
+                self.items.middle[1] = match launcher.get_profile(&selected_profile) {
                     Some(p) => self.items.middle[1].replace("${profile}", &p.name),
                     None => "Select Profile".to_string(),
                 }

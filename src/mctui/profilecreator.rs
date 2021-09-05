@@ -2,7 +2,7 @@ use super::app::{TuiWidget, WindowType};
 use crate::constants::VERSIONS;
 use crate::structs::libraries::Libraries;
 use crate::structs::versions;
-use crate::SettingsPtr;
+use crate::LauncherPtr;
 use async_trait::async_trait;
 use crossterm::event::KeyCode;
 use tui::backend::Backend;
@@ -20,11 +20,11 @@ pub struct ProfileCreatorWindow {
     pub id: Option<String>,
     pub versions: Vec<versions::Version>,
     list_state: ListState,
-    settings: SettingsPtr,
+    launcher: LauncherPtr,
 }
 
 impl ProfileCreatorWindow {
-    pub async fn new(settings: SettingsPtr) -> Self {
+    pub async fn new(launcher: LauncherPtr) -> Self {
         let versions_resp: versions::Versions =
             reqwest::get(VERSIONS).await.unwrap().json().await.unwrap();
         let mut list_state = ListState::default();
@@ -35,7 +35,7 @@ impl ProfileCreatorWindow {
             input: String::new(),
             id: None,
             versions: versions_resp.versions,
-            settings,
+            launcher,
         }
     }
 }
@@ -55,17 +55,17 @@ impl TuiWidget for ProfileCreatorWindow {
                     .await
                     .unwrap();
 
-                let mut settings = self.settings.lock().unwrap();
+                let mut launcher = self.launcher.lock().unwrap();
                 match self.id.to_owned() {
                     Some(id) => {
-                        settings.edit_profile(
+                        launcher.edit_profile(
                             id,
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
                         );
                     }
                     None => {
-                        settings.create_profile(
+                        launcher.create_profile(
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
                             assets_resp.asset_index.id,

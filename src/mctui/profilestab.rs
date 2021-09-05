@@ -45,7 +45,8 @@ impl TuiWidget for ProfilesTab {
                 let mut launcher = self.launcher.lock().unwrap();
                 let id = launcher.profiles.profiles[self.selected_index].id.clone();
 
-                launcher.delete_profile(id);
+                launcher.profiles.delete(id);
+                launcher.save();
             }
             KeyCode::Down => {
                 if self.selected_index + 1 != self.profiles_len {

@@ -74,7 +74,7 @@ impl TuiWidget for BottomNav {
                         let id = launcher.profiles.selected.clone();
                         let data_dir = launcher.app_dirs.as_ref().unwrap().data_dir.clone();
 
-                        let profile = launcher.get_profile(&id).unwrap();
+                        let profile = launcher.profiles.get_current(&id).cloned().unwrap();
                         let authentication = launcher.auth.get().cloned().unwrap();
 
                         if let Some(sender) = self.sender.to_owned() {
@@ -146,7 +146,7 @@ impl TuiWidget for BottomNav {
                 let launcher = self.launcher.lock().unwrap();
                 let selected_profile = launcher.profiles.selected.to_owned();
 
-                self.items.middle[1] = match launcher.get_profile(&selected_profile) {
+                self.items.middle[1] = match launcher.profiles.get_current(&selected_profile) {
                     Some(p) => self.items.middle[1].replace("${profile}", &p.name),
                     None => "Select Profile".to_string(),
                 }

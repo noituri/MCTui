@@ -1,4 +1,5 @@
 pub mod authentication;
+pub mod profile;
 
 use platform_dirs::AppDirs;
 use serde::{Deserialize, Serialize};
@@ -7,9 +8,8 @@ use std::fs::File;
 use std::io::Read;
 use uuid::Uuid;
 
-use crate::structs::settings::{Profile, Profiles};
-
 use self::authentication::Authentication;
+use self::profile::Profile;
 
 const FILE_NAME: &str = "mctui.json";
 
@@ -35,9 +35,65 @@ impl LauncherAuth {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct LauncherProfiles {
+    pub selected: String,
+    pub profiles: Vec<Profile>,
+}
+
+impl LauncherProfiles {
+    pub fn get_current(&self, id: &str) -> Option<&Profile> {
+        self.profiles.iter().find(|x| x.id == id)
+    }
+
+    pub fn create(&mut self, name: String, version: String, asset: String, args: String) {
+        let mut id = Uuid::new_v4().to_string();
+
+        loop {
+            let mut exists = false;
+            for p in &self.profiles {
+                if p.id == id {
+                    id = Uuid::new_v4().to_string();
+                    exists = true
+                }
+            }
+
+            if !exists {
+                break;
+            }
+        }
+
+        self.profiles.push(Profile {
+            id: id.to_owned(),
+            name,
+            version,
+            asset,
+            args,
+        });
+
+        if self.selected.is_empty() {
+            self.selected = id;
+        }
+    }
+
+    pub fn edit(&mut self, id: String, name: String, version: String) {
+        for p in self.profiles.iter_mut() {
+            if p.id == id {
+                p.name = name.to_owned();
+                p.version = version.to_owned();
+            }
+        }
+    }
+
+    pub fn delete(&mut self, id: String) {
+        let index = self.profiles.iter().position(|p| *p.id == id).unwrap();
+        self.profiles.remove(index);
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Launcher {
     pub auth: LauncherAuth,
-    pub profiles: Profiles,
+    pub profiles: LauncherProfiles,
 
     /// FIXME: Temporary solution until Launcher refactoring
     #[serde(skip)]
@@ -71,68 +127,6 @@ impl Launcher {
 
         serde_json::to_writer_pretty(&File::create(settings_path).unwrap(), self).unwrap();
     }
-
-    pub fn get_profile(&self, id: &str) -> Option<Profile> {
-        self.profiles
-            .profiles
-            .iter()
-            .find(|x| x.id == id)
-            .map(Clone::clone)
-    }
-
-    pub fn create_profile(&mut self, name: String, version: String, asset: String, args: String) {
-        let mut id = Uuid::new_v4().to_string();
-
-        loop {
-            let mut exists = false;
-            for p in &self.profiles.profiles {
-                if p.id == id {
-                    id = Uuid::new_v4().to_string();
-                    exists = true
-                }
-            }
-
-            if !exists {
-                break;
-            }
-        }
-
-        self.profiles.profiles.push(Profile {
-            id: id.to_owned(),
-            name,
-            version,
-            asset,
-            args,
-        });
-
-        if self.profiles.selected.is_empty() {
-            self.profiles.selected = id;
-        }
-
-        self.save();
-    }
-
-    pub fn edit_profile(&mut self, id: String, name: String, version: String) {
-        for p in self.profiles.profiles.iter_mut() {
-            if p.id == id {
-                p.name = name.to_owned();
-                p.version = version.to_owned();
-            }
-        }
-
-        self.save();
-    }
-
-    pub fn delete_profile(&mut self, id: String) {
-        let index = self
-            .profiles
-            .profiles
-            .iter()
-            .position(|p| *p.id == id)
-            .unwrap();
-        self.profiles.profiles.remove(index);
-        self.save();
-    }
 }
 
 impl Default for Launcher {
@@ -141,7 +135,7 @@ impl Default for Launcher {
             auth: LauncherAuth {
                 authentication: None,
             },
-            profiles: Profiles {
+            profiles: LauncherProfiles {
                 selected: "".to_string(),
                 profiles: Vec::new(),
             },

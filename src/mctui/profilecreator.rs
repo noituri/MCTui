@@ -58,19 +58,21 @@ impl TuiWidget for ProfileCreatorWindow {
                 let mut launcher = self.launcher.lock().unwrap();
                 match self.id.to_owned() {
                     Some(id) => {
-                        launcher.edit_profile(
+                        launcher.profiles.edit(
                             id,
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
                         );
+                        launcher.save();
                     }
                     None => {
-                        launcher.create_profile(
+                        launcher.profiles.create(
                             self.input.to_owned(),
                             selected_version.id.to_owned(),
                             assets_resp.asset_index.id,
                             "-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M".to_string(),
                         );
+                        launcher.save();
                     }
                 }
 

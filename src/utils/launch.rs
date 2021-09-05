@@ -1,7 +1,7 @@
 use crate::constants::*;
 use crate::launcher::authentication::Authentication;
+use crate::launcher::profile::Profile;
 use crate::structs::libraries::Libraries;
-use crate::structs::settings::Profile;
 use crate::structs::*;
 use crate::utils::files;
 use crossbeam_channel::Sender;

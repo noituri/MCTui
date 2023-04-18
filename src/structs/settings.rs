@@ -19,16 +19,15 @@ pub struct Settings {
 impl Settings {
     pub fn new(app_dirs: AppDirs) -> Result<Self, Box<dyn Error>> {
         let settings_path = app_dirs.data_dir.join(FILE_NAME);
+        
+        let mut settings = if settings_path.exists() {
+            let mut file = File::open(&settings_path)?;
+            let mut contents = String::new();
+            file.read_to_string(&mut contents)?;
 
-        let mut settings = match settings_path.exists() {
-            true => {
-                let mut file = File::open(&settings_path)?;
-                let mut contents = String::new();
-                file.read_to_string(&mut contents)?;
-
-                serde_json::from_str(&contents)?
-            }
-            false => Settings::default(),
+            serde_json::from_str(&contents)?
+        } else { 
+            Settings::default()
         };
 
         // FIXME: Temporary solution until Settings refactoring
